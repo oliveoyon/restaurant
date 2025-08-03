@@ -39,15 +39,21 @@
         <div class="col-md-6">
             {{-- Left Column --}}
             <div class="form-group row">
-                <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Invoice No</label>
+                <label for="purchase_date" class="col-sm-3 col-form-label col-form-label-sm">Purchase Date</label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control form-control-sm datepicker" name="purchase_date" id="purchase_date">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="invoice_no" class="col-sm-3 col-form-label col-form-label-sm">Invoice No</label>
                 <div class="col-sm-9">
                     <input type="text" name="invoice_no" class="form-control form-control-sm"
-                        readonly value="{{ $inv }}" id="colFormLabelSm">
+                        readonly value="{{ $inv }}" id="invoice_no">
                     <span class="text-danger error-text invoice_no_error"></span>
                 </div>
             </div>
             <div class="form-group row">
-                <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Supplier Name</label>
+                <label for="supplier_selected" class="col-sm-3 col-form-label col-form-label-sm">Supplier Name</label>
                 <div class="col-sm-9">
                     <select class="form-control form-control-sm select2bs4" required name="supplier_id"
                         style="width: 100%;" id="supplier_selected">
@@ -61,7 +67,7 @@
                 </div>
             </div>
             <div class="form-group row">
-                <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Product Name</label>
+                <label for="product_id" class="col-sm-3 col-form-label col-form-label-sm">Product Name</label>
                 <div class="col-sm-9">
                     <select name="product_id" class="form-control select2bs4" required id="product_id">
                         <option value="">--Select a Product--</option>
@@ -73,28 +79,19 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-6 col-form-label col-form-label-sm">Stock</label>
-                        <div class="col-sm-6">
-                            <input type="text" name="stock" disabled class="form-control form-control-sm" id="colFormLabelSm">
+            {{-- Aligned: Stock, Unit, Barcode --}}
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label col-form-label-sm">Stock / Unit / Barcode</label>
+                <div class="col-sm-9">
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <input type="text" name="stock" disabled class="form-control form-control-sm" placeholder="Stock">
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-4 col-form-label col-form-label-sm">Unit</label>
-                        <div class="col-sm-8">
-                            <input type="text" name="unit" disabled class="form-control form-control-sm" id="colFormLabelSm">
+                        <div class="col-sm-4">
+                            <input type="text" name="unit" disabled class="form-control form-control-sm" placeholder="Unit">
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-5 col-form-label col-form-label-sm">Barcode</label>
-                        <div class="col-sm-7">
-                            <input type="text" name="barcode" class="form-control form-control-sm" value="">
+                        <div class="col-sm-4">
+                            <input type="text" name="barcode" class="form-control form-control-sm" placeholder="Barcode">
                         </div>
                     </div>
                 </div>
@@ -103,60 +100,36 @@
 
         <div class="col-md-6">
             {{-- Right Column --}}
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-6 col-form-label col-form-label-sm">Quantity</label>
-                        <div class="col-sm-6">
-                            <input type="text" name="quantity" class="form-control form-control-sm" required value=""
-                                id="quantity">
-                            <span class="text-danger error-text quantity_error"></span>
-                        </div>
-                    </div>
+            <div class="form-group row">
+                <label for="quantity" class="col-sm-3 col-form-label col-form-label-sm">Quantity</label>
+                <div class="col-sm-9">
+                    <input type="text" name="quantity" class="form-control form-control-sm" required value=""
+                        id="quantity">
+                    <span class="text-danger error-text quantity_error"></span>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-6 col-form-label col-form-label-sm">Buy Price</label>
-                        <div class="col-sm-6">
-                            <input type="text" name="buy_price" class="form-control form-control-sm" required
-                                id="buy_price">
-                            <span class="text-danger error-text buy_price_error"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-5 col-form-label col-form-label-sm">Sale Price</label>
-                        <div class="col-sm-7">
-                            <input type="text" name="sell_price" class="form-control form-control-sm" required
-                                id="colFormLabelSm">
-                            <span class="text-danger error-text sell_price_error"></span>
-                        </div>
-                    </div>
+            <div class="form-group row">
+                <label for="buy_price" class="col-sm-3 col-form-label col-form-label-sm">Buy Price</label>
+                <div class="col-sm-9">
+                    <input type="text" name="buy_price" class="form-control form-control-sm" required id="buy_price">
+                    <span class="text-danger error-text buy_price_error"></span>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-6 col-form-label col-form-label-sm">Purchase Date</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control form-control-sm datepicker" name="purchase_date">
-                        </div>
-                    </div>
+            <div class="form-group row">
+                <label for="sell_price" class="col-sm-3 col-form-label col-form-label-sm">Sale Price</label>
+                <div class="col-sm-9">
+                    <input type="text" name="sell_price" class="form-control form-control-sm" required id="sell_price">
+                    <span class="text-danger error-text sell_price_error"></span>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group row">
-                        <label for="colFormLabelSm" class="col-sm-6 col-form-label col-form-label-sm">Grand Total</label>
-                        <div class="col-sm-6">
-                            <input type="text" name="net_cost" class="form-control form-control-sm" readonly
-                                id="net_cost" value="">
-                            <span class="text-danger error-text net_cost_error"></span>
-                        </div>
-                    </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="net_cost" class="col-sm-3 col-form-label col-form-label-sm">Grand Total</label>
+                <div class="col-sm-9">
+                    <input type="text" name="net_cost" class="form-control form-control-sm" readonly id="net_cost" value="">
+                    <span class="text-danger error-text net_cost_error"></span>
                 </div>
             </div>
         </div>
