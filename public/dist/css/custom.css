@@ -1,0 +1,140 @@
+
+@page {
+  size: auto;
+}
+  
+  
+  #vert-tabs-tab .active{
+        background: green;
+        color:white;
+        font-weight: bold;
+    }
+
+    .modal.modal-fullscreen .modal-dialog {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  max-width: none; 
+}
+
+.modal.modal-fullscreen .modal-content {
+  height: auto;
+  height: 100vh;
+  border-radius: 0;
+  border: none; 
+}
+
+.modal.modal-fullscreen .modal-body {
+  overflow-y: auto; 
+}
+
+@page {
+  size: auto;
+}
+
+@media screen {
+  #printSection {
+      display: none;
+  }
+
+  div.divFooter {
+    display: none;
+  }
+}
+
+@media print {
+  body * {
+    visibility:hidden;
+    
+  }
+  
+  #printSection, #printSection * {
+    visibility:visible;
+    width: auto;    
+    height: auto;
+  }
+
+  
+  #printThis {
+   margin-top: -30%;
+  }
+
+  div.divFooter {
+    position: fixed;
+    bottom: 15;
+  }
+  
+  
+}
+
+
+        
+.reportlist {
+  counter-reset: li; 
+  list-style: none; 
+  padding: 0;
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
+}
+
+.reportlist a {
+  position: relative;
+  display: block;
+  padding: .4em .4em .4em .8em;
+  margin: .5em 0 .5em 2.5em;
+  background: #D3D4DA;
+  color: #444;
+  text-decoration: none;
+  transition: all .3s ease-out;
+}
+
+.reportlist a:hover {background: #DCDDE1;}       
+.reportlist a:before
+ {
+  content: counter(li);
+  counter-increment: li;
+  position: absolute;
+  left: -2.5em;
+  top: 50%;
+  margin-top: -1em;
+  background: #f9dd94;
+  height: 2em;
+  width: 2em;
+  line-height: 2em;
+  text-align: center;
+  font-weight: bold;
+}
+
+.reportlist a:after {
+  position: absolute;
+  content: "";
+  border: .5em solid transparent;
+  left: -1em;
+  top: 50%;
+  margin-top: -.5em;
+  transition: all .3s ease-out;
+}
+
+.reportlist a:hover:after {
+  left: -.5em;
+  border-left-color: #f9dd94;
+}
+
+.actives a {
+  color: #f30909;
+  font-weight: bold;
+}
+
+/* @media screen {
+  div.divFooter {
+    display: none;
+  }
+}
+@media print {
+  div.divFooter {
+    position: fixed;
+    bottom: 0;
+  }
+}
+     */
+

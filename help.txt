@@ -1,0 +1,15 @@
+should not be changed in account type
+
+Inventory
+Discount Received
+Damage Expense
+Sales Revenue
+Discount Allowed
+Bank Cheque
+
+
+should not be changed in category
+
+1 => Direct Purchased Product
+2 => Finished Product
+3 => Raw Materials Ingredients

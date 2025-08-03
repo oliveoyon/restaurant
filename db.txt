@@ -1,0 +1,20 @@
+product
+
+id, barcode, manufacturerid catid, brandid, unitid, shelfid producttitle, title-slug, totalqty, pdtimg
+
+2nd table (group and individual)
+id, pdtcode, pdtid, shelfid sn, batchno, size, color, pdtimg, qty, buy price, sale price, expiry date
+
+option table
+
+id, option name, status
+
+option value
+
+id, option id, value name, status
+
+a tick should be placed, if clicked then will open individual add more 
+(if same individual then qty will be 4/5/6 or inidividual with unique sl no), otherwise total quantity will be the same
+all individual qty should be the equal of main qty
+
+sale invoice -- should be included size color, if any 
