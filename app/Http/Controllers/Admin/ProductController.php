@@ -594,19 +594,40 @@ class ProductController extends Controller
             }
             session()->put('cart', $cart);
             $accounts = DB::table('account_types')->where(['is_money' => 1, 'store_id' => $store_id])->get();
-            $html = "<table class='table table-bordered table-hovered'><tr><th>Sn</th><th>Product Name</th><th>Quantity</th><th>Rate</th><th>Amount</th><th>Tax/Unit</th><th>Total Tax</th><th>Actual Amount</th><th>Action</th></tr>";
+            $html = "<table class='table table-bordered table-hovered'>
+    <tr>
+        <th>Sn</th>
+        <th>Product Name</th>
+        <th>Quantity</th>
+        <th>Rate</th>
+        <th>Amount</th>
+        <!-- Removed Tax/Unit and Total Tax headers -->
+        <th>Actual Amount</th>
+        <th>Action</th>
+    </tr>";
+
             $i = 1;
             $total = 0;
             $totalprice = 0;
+
             foreach (session('cart') as $p) {
-                $totalprice = $totalprice + (($p['buy_price_with_tax'] - $p['buy_price']) * $p['quantity']) + ($p['buy_price'] * $p['quantity']);
-                $total = $total + ($p['buy_price'] * $p['quantity']);
+                $totalprice += (($p['buy_price_with_tax'] - $p['buy_price']) * $p['quantity']) + ($p['buy_price'] * $p['quantity']);
+                $total += ($p['buy_price'] * $p['quantity']);
                 $pdtname = $this->getPdtName($p['product_id']);
                 $html .= "<tr>";
-                $html .= "<td>" . $i++ . "</td>" . "<td>" . $pdtname . "</td>" . "<td>" . $p['quantity'] . "</td>" . "<td>" . $p['buy_price'] . "</td>" . "<td>" . $p['buy_price'] * $p['quantity'] . "</td>" . "<td>" . $p['buy_price_with_tax'] - $p['buy_price'] . "</td>" . "<td>" . ($p['buy_price_with_tax'] - $p['buy_price']) * $p['quantity'] . "</td>" . "<td>" . (($p['buy_price_with_tax'] - $p['buy_price']) * $p['quantity']) + ($p['buy_price'] * $p['quantity']) . "</td>" . '<td><button class="btn btn-sm btn-danger" data-id="' . $p['pdt_stock_hash_id'] . '" id="deletePdtBtn">X</button></td>';
+                $html .= "<td>" . $i++ . "</td>"
+                    . "<td>" . $pdtname . "</td>"
+                    . "<td>" . $p['quantity'] . "</td>"
+                    . "<td>" . $p['buy_price'] . "</td>"
+                    . "<td>" . ($p['buy_price'] * $p['quantity']) . "</td>"
+                    // Removed Tax/Unit and Total Tax columns here
+                    . "<td>" . ((($p['buy_price_with_tax'] - $p['buy_price']) * $p['quantity']) + ($p['buy_price'] * $p['quantity'])) . "</td>"
+                    . '<td><button class="btn btn-sm btn-danger" data-id="' . $p['pdt_stock_hash_id'] . '" id="deletePdtBtn">X</button></td>';
                 $html .= "</tr>";
             }
+
             $html .= "</table>";
+
 
             $html1 = '
             <div class="row">
