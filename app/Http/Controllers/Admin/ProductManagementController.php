@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Account_Types;
 use App\Models\Admin\Category;
+use App\Models\Admin\Customer;
 use App\Models\Admin\Location;
 use App\Models\Admin\Unit;
 use App\Models\Admin\Manufacturer;
@@ -75,12 +76,15 @@ class ProductManagementController extends Controller
         $paid = $request->paid;
 
         $customer_id = $request->customer_ids;
+
+
+
         $description = '';
 
         $acc_code1 = Account_Types::where(['id' => $request->credit])->first();
         $acc_code = $acc_code1->code;
         $check_pending = 0;
-        
+
         if ($acc_code1->account_name == "Bank Cheque") {
             $acc_code = $customer_id;
             $paid = 0;
@@ -91,10 +95,10 @@ class ProductManagementController extends Controller
 
         if ($acc_code1->is_wallet == 1) {
             $acc_code = $acc_code1->code;
-            $description = 'Paid through'. $acc_code1->account_name;
+            $description = 'Paid through' . $acc_code1->account_name;
         }
 
-        
+
 
         foreach ($array as $a) {
             $total += $a['total'];
@@ -115,7 +119,7 @@ class ProductManagementController extends Controller
                 "store_id"       => $store_id,
                 'created_at'     => now(),
                 'updated_at'     => now(),
-            ]); 
+            ]);
 
             // Deduct from stock
             if ($product->category_id == 1) {
@@ -396,6 +400,76 @@ class ProductManagementController extends Controller
             return response()->json(['code' => 1, 'msg' => 'Product Sold Successfully', 'html1' => $html1, 'inv' => $inv]);
         }
     }
+
+    
+
+    public function checkPhone(Request $request)
+    {
+        $phone = $request->input('phone');
+        $customer = Customer::where('customer_phone', $phone)->first();
+
+        if ($customer) {
+            return response()->json([
+                'exists' => true,
+                'customer' => [
+                    'id' => $customer->parent_id,  // or $customer->id if you want
+                    'name' => $customer->customer_name,
+                ],
+            ]);
+        } else {
+            return response()->json(['exists' => false]);
+        }
+    }
+
+    // AJAX: Save new customer
+
+public function store(Request $request)
+{
+    $request->validate([
+        'phone' => 'required|unique:customers,customer_phone',
+        'name' => 'required|string',
+        'email' => 'nullable|email',
+    ]);
+
+    $store_id = auth()->user()->store_id ?? 1;
+
+    // Create Account_Type first
+    $accounttype = new Account_Types();
+    $accounttype->account_type_hash_id = md5(uniqid(rand(), true));
+    $accounttype->account_head_id = 1; // customer type
+    $accounttype->account_name = $request->phone;
+    $accounttype->store_id = $store_id;
+    $accounttype->is_money = 0;
+    $accounttype->code = Account_Types::where(['account_head_id' => 1, 'store_id' => $store_id])->max('code') + 1;
+    $accounttype->normal = 1;
+    $accounttype->acc_type = 'customer';
+    $accounttype->acctype_status = 1;
+    $accounttype->save();
+
+    // Create Customer linked to Account_Type
+    $customer = Customer::create([
+        'customer_hash_id' => md5(uniqid(rand(), true)),
+        'customer_name' => $request->name,
+        'customer_phone' => $request->phone,
+        'customer_email' => $request->email,
+        'store_id' => $store_id,
+        'customer_status' => 1,
+        'parent_id' => $accounttype->code, // link customer to accounttype
+        'is_walkin' => 0,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'customer' => [
+            'id' => $customer->parent_id, // or $customer->id if you prefer
+            'name' => $customer->customer_name,
+        ],
+    ]);
+}
+
+
+
+
 
     public function search(Request $request)
     {
@@ -969,5 +1043,35 @@ class ProductManagementController extends Controller
         } else {
             return response()->json(['code' => 0, 'msg' => 'Something went wrong']);
         }
+    }
+
+    public function editProductPriceForm()
+    {
+        $categories = Category::where('category_status', 1)->get();
+        return view('dashboard.admin.productManagement.edit-sell-price', compact('categories'));
+    }
+
+    public function getProductsByCategory(Request $request)
+    {
+        $products = Product::where('category_id', $request->category_id)->get();
+        return response()->json($products);
+    }
+
+    public function getProductBatchStock(Request $request)
+    {
+        $stocks = ProductStock::where('product_id', $request->product_id)
+            ->where('quantity', '>', 0)
+            ->get();
+
+        return response()->json($stocks);
+    }
+
+    public function updateSellPrices(Request $request)
+    {
+        foreach ($request->sell_prices as $stock_id => $price) {
+            ProductStock::where('id', $stock_id)->update(['sell_price' => $price]);
+        }
+
+        return redirect()->back()->with('success', 'Sell prices updated successfully.');
     }
 }

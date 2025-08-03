@@ -44,6 +44,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -76,6 +77,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -107,6 +109,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -140,6 +143,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -173,6 +177,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -207,6 +212,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 
@@ -242,6 +248,7 @@ class StocksReportController extends Controller
             'products.category_id' => $request->category_id,
             'products.brand_id' => $request->brand_id,
             'products.store_id' => $store_id,
+            'product_stocks.supplier_id' => $request->supplier_id,
         ];
         $whr = array_filter($whr);
 

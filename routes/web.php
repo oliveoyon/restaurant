@@ -272,6 +272,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('sale', [ProductManagementController::class, 'sale'])->name('sale');
         Route::post('save', [ProductManagementController::class, 'save'])->name('save');
         Route::get('search', [ProductManagementController::class, 'search'])->name('search');
+Route::post('/customers/check-phone', [ProductManagementController::class, 'checkPhone'])->name('customers.checkPhone');
+Route::post('/customers', [ProductManagementController::class, 'store'])->name('customers.store');
 
 
         Route::get('printBarcode', [SalesController::class, 'printBarcode'])->name('printBarcode');
@@ -315,6 +317,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('current-liabilities', [ProfitLossController::class, 'currentLiabilitiesForm'])->name('current-liabilities.form');
         Route::post('current-liabilities/generate', [ProfitLossController::class, 'currentLiabilitiesReport'])->name('current-liabilities.generate');
 
+        Route::get('/edit-product-sell-price', [ProductManagementController::class, 'editProductPriceForm'])->name('edit.product.price.form');
+Route::post('/get-products-by-category', [ProductManagementController::class, 'getProductsByCategory'])->name('get.products.by.category');
+Route::post('/get-product-batch-stock', [ProductManagementController::class, 'getProductBatchStock'])->name('get.product.batch.stock');
+Route::post('/update-sell-prices', [ProductManagementController::class, 'updateSellPrices'])->name('update.sell.prices');
 
         
 
