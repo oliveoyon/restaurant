@@ -62,8 +62,7 @@
                             $('input[name=buy_price').val('');
                             $('input[name=sell_price').val('');
                             $('input[name=quantity').val('');
-                            $('input[name=purchase_date').val('');
-                            $('input[name=purchase_date').val('');
+                            // $('input[name=purchase_date').val('');
                             $('input[name=expired_date').val('');
                             $('select[name=taxes').val(0);
                             $('input[name=total_tax').val('');
@@ -83,36 +82,28 @@
 
 
         //DELETE Version RECORD
-        $(document).on('click', '#deletePdtBtn', function() {
-            var cartId = $(this).data('id');
-            var url = '<?= route('admin.deletePdtCart') ?>';
-            swal.fire({
-                title: 'Are you sure?',
-                html: 'You want to <b>delete</b> this Brand',
-                showCancelButton: true,
-                showCloseButton: true,
-                cancelButtonText: 'Cancel',
-                confirmButtonText: 'Yes, Delete',
-                cancelButtonColor: '#d33',
-                confirmButtonColor: '#556ee6',
-                width: 300,
-                allowOutsideClick: false
-            }).then(function(result) {
-                if (result.value) {
-                    $.post(url, {
-                        cartId: cartId
-                    }, function(data) {
-                        if (data.code == 1) {
-                            $('#table-responsive').html(data.html);
-                            $('#table-responsive1').html(data.html1);
-                            toastr.success(data.msg);
-                        } else {
-                            toastr.error(data.msg);
-                        }
-                    }, 'json');
-                }
-            });
+        $(document).on('click', '#deletePdtBtn', function () {
+    alert('test'); // Just to verify click works
+
+    var cartId = $(this).data('id');
+    var url = '<?= route('admin.deletePdtCart') ?>';
+
+    if (confirm('Are you sure you want to delete this item?')) {
+        $.post(url, { cartId: cartId }, function (data) {
+            console.log(data); // For debugging in console
+            if (data.code == 1) {
+                $('#table-responsive').html(data.html);
+                $('#table-responsive1').html(data.html1);
+                toastr.success(data.msg);
+            } else {
+                toastr.error(data.msg);
+            }
+        }, 'json').fail(function (xhr) {
+            console.error("Error:", xhr.responseText);
         });
+    }
+});
+
 
 
 

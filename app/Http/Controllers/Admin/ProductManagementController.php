@@ -59,8 +59,7 @@ class ProductManagementController extends Controller
     {
         // dd($request->sale_date);
         $array = json_decode($request->cart_items, true);
-        // dd($array);
-        $saleDateFormatted = Carbon::parse($request->sale_date)->format('dmy');
+        $saleDate = $request->sale_date == date('Y-m-d') ? now() : Carbon::parse($request->sale_date . ' ' . now()->format('H:i:s'));
         if (empty($array)) {
             return response()->json(['code' => 0, 'msg' => 'Cart is empty!']);
         }
@@ -70,10 +69,10 @@ class ProductManagementController extends Controller
         $sales_revenue = $allaccount->where('account_name', 'Sales Revenue')->pluck('code')->first();
         $discount_allowed = $allaccount->where('account_name', 'Discount Allowed')->pluck('code')->first();
         $invtotal = DB::table('sales')->where(['store_id' => $store_id])->get();
-        $invoice_no = 'SI-' . date('ymd') . '-' . count($invtotal) + 1;
         $total = 0;
         $discount = $request->discount;
         $paid = $request->paid;
+        $invoice_no = 'SI-' . $saleDate->format('ymd') . '-' . count($invtotal) + 1;
 
         $customer_id = $request->customer_ids;
 
@@ -117,7 +116,7 @@ class ProductManagementController extends Controller
                 "rate"           => $a['price'],
                 "sale_by"        => \Auth::guard('admin')->user()->id,
                 "store_id"       => $store_id,
-                'created_at'     => now(),
+                'created_at'     => $saleDate,
                 'updated_at'     => now(),
             ]);
 
@@ -152,7 +151,7 @@ class ProductManagementController extends Controller
                                 'quantity_deducted' => $requiredQty,
                                 'reason' => 'sale for product #' . $product->id,
                                 'store_id' => $store_id,
-                                'created_at' => now(),
+                                'created_at' => $saleDate,
                             ]);
 
                             $requiredQty = 0;
@@ -167,7 +166,7 @@ class ProductManagementController extends Controller
                                 'quantity_deducted' => $batch->quantity,
                                 'reason' => 'sale for product #' . $product->id,
                                 'store_id' => $store_id,
-                                'created_at' => now(),
+                                'created_at' => $saleDate,
                             ]);
 
                             $requiredQty -= $batch->quantity;
@@ -176,9 +175,6 @@ class ProductManagementController extends Controller
                 }
             }
         }
-
-
-
 
         $due = $total - ($discount + $paid);
 
@@ -195,6 +191,7 @@ class ProductManagementController extends Controller
         $sales->sale_status = 1; // due, etc
         $sales->check_pending = $check_pending;
         $sales->store_id = $store_id;
+        $sales->created_at = $saleDate;
         $query = $sales->save();
 
 
@@ -206,7 +203,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold ' . $paid,
                 'amount' => $paid,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -215,7 +212,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold ' . $paid,
                 'amount' => $paid,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -228,7 +225,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold with discount ' . $discount,
                 'amount' => $paid,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -237,7 +234,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold with discount ' . $discount,
                 'amount' => $discount,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -246,7 +243,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold with discount ' . $discount,
                 'amount' => $total,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -259,7 +256,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold on credit',
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -268,7 +265,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold on credit',
                 'amount' => $due,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -282,7 +279,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods Sold on credit with discount',
                 'amount' => $due,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -291,7 +288,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods Sold on credit with discount',
                 'amount' => $discount,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -300,7 +297,7 @@ class ProductManagementController extends Controller
                 'description' => 'Goods sold on credit with discount',
                 'amount' => $total,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -313,7 +310,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods sold ' . $paid,     //paid + discount 
                 'amount' => $paid,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -322,7 +319,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods Sold on credit with discount',
                 'amount' => $due,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -331,7 +328,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods Sold on credit with discount',
                 'amount' => $discount,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -340,7 +337,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods Sold on credit with discount',
                 'amount' => $total,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -353,7 +350,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods sold ' . $paid,     //paid + discount 
                 'amount' => $paid,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -362,7 +359,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods Sold on credit with discount',
                 'amount' => $due,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
 
@@ -372,7 +369,7 @@ class ProductManagementController extends Controller
                 'description' => '--Goods Sold on credit with discount',
                 'amount' => $total,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $saleDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -392,7 +389,7 @@ class ProductManagementController extends Controller
 
         $html1 = view('dashboard.admin.reports.accounts.sample_report.invoice', $datas)->render();
         $invtotal = DB::table('sales')->where(['store_id' => $store_id])->get();
-        $inv = 'SI-' . date('ymd') . '-' . count($invtotal) + 1;
+        $inv = 'SI-' . $saleDate->format('ymd') . '-' . count($invtotal) + 1;
 
         if (!$query) {
             return response()->json(['code' => 0, 'msg' => 'Something went wrong']);
@@ -401,7 +398,7 @@ class ProductManagementController extends Controller
         }
     }
 
-    
+
 
     public function checkPhone(Request $request)
     {
@@ -409,11 +406,16 @@ class ProductManagementController extends Controller
         $customer = Customer::where('customer_phone', $phone)->first();
 
         if ($customer) {
+            // If name is blank/null, use phone number as name
+            $name = !empty(trim($customer->customer_name))
+                ? $customer->customer_name
+                : $customer->customer_phone;
+
             return response()->json([
                 'exists' => true,
                 'customer' => [
-                    'id' => $customer->parent_id,  // or $customer->id if you want
-                    'name' => $customer->customer_name,
+                    'id' => $customer->parent_id, // or $customer->id if preferred
+                    'name' => $name,
                 ],
             ]);
         } else {
@@ -421,51 +423,52 @@ class ProductManagementController extends Controller
         }
     }
 
+
     // AJAX: Save new customer
 
-public function store(Request $request)
-{
-    $request->validate([
-        'phone' => 'required|unique:customers,customer_phone',
-        'name' => 'required|string',
-        'email' => 'nullable|email',
-    ]);
+    public function store(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|unique:customers,customer_phone',
+            // 'name' => 'required|string',
+            // 'email' => 'nullable|email',
+        ]);
 
-    $store_id = auth()->user()->store_id ?? 1;
+        $store_id = auth()->user()->store_id ?? 1;
 
-    // Create Account_Type first
-    $accounttype = new Account_Types();
-    $accounttype->account_type_hash_id = md5(uniqid(rand(), true));
-    $accounttype->account_head_id = 1; // customer type
-    $accounttype->account_name = $request->phone;
-    $accounttype->store_id = $store_id;
-    $accounttype->is_money = 0;
-    $accounttype->code = Account_Types::where(['account_head_id' => 1, 'store_id' => $store_id])->max('code') + 1;
-    $accounttype->normal = 1;
-    $accounttype->acc_type = 'customer';
-    $accounttype->acctype_status = 1;
-    $accounttype->save();
+        // Create Account_Type first
+        $accounttype = new Account_Types();
+        $accounttype->account_type_hash_id = md5(uniqid(rand(), true));
+        $accounttype->account_head_id = 1; // customer type
+        $accounttype->account_name = $request->phone;
+        $accounttype->store_id = $store_id;
+        $accounttype->is_money = 0;
+        $accounttype->code = Account_Types::where(['account_head_id' => 1, 'store_id' => $store_id])->max('code') + 1;
+        $accounttype->normal = 1;
+        $accounttype->acc_type = 'customer';
+        $accounttype->acctype_status = 1;
+        $accounttype->save();
 
-    // Create Customer linked to Account_Type
-    $customer = Customer::create([
-        'customer_hash_id' => md5(uniqid(rand(), true)),
-        'customer_name' => $request->name,
-        'customer_phone' => $request->phone,
-        'customer_email' => $request->email,
-        'store_id' => $store_id,
-        'customer_status' => 1,
-        'parent_id' => $accounttype->code, // link customer to accounttype
-        'is_walkin' => 0,
-    ]);
+        // Create Customer linked to Account_Type
+        $customer = Customer::create([
+            'customer_hash_id' => md5(uniqid(rand(), true)),
+            'customer_name' => $request->name,
+            'customer_phone' => $request->phone,
+            'customer_email' => $request->email,
+            'store_id' => $store_id,
+            'customer_status' => 1,
+            'parent_id' => $accounttype->code, // link customer to accounttype
+            'is_walkin' => 0,
+        ]);
 
-    return response()->json([
-        'success' => true,
-        'customer' => [
-            'id' => $customer->parent_id, // or $customer->id if you prefer
-            'name' => $customer->customer_name,
-        ],
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'customer' => [
+                'id' => $customer->parent_id, // or $customer->id if you prefer
+                'name' => $customer->customer_name,
+            ],
+        ]);
+    }
 
 
 

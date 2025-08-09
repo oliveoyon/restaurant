@@ -12,6 +12,7 @@ use App\Models\Admin\PurchaseReturns;
 use App\Models\Admin\Supplier;
 use App\Models\Admin\Transactions;
 use App\Models\Admin\Unit;
+use App\Models\PurchasedProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -35,16 +36,36 @@ class PurchaseController extends Controller
         return view('dashboard.admin.productManagement.purchaseReturn', $data);
     }
 
+    // public function searchProducts(Request $request)
+    // {
+    //     $store_id = \Auth::guard('admin')->user()->store_id;
+    //     $products = productStock::select('products.product_title', 'product_stocks.*')
+    //         ->leftJoin('products', 'product_stocks.product_id', '=', 'products.id')
+    //         ->where('product_stocks.supplier_id', '=', $request->supplier_id)
+    //         ->where('product_stocks.store_id', \Auth::guard('admin')->user()->store_id)
+    //         ->where('product_stocks.quantity', '>', 0)
+    //         ->groupBy('product_stocks.id')
+    //         ->orderBy('products.id', 'desc')->get();
+
+    //     $htmlc = "<option value=''>Select an Option</option>";
+    //     foreach ($products as $p) {
+    //         $htmlc .= "<option value='$p->id'>$p->product_title ($p->invoice_no) ($p->batch_no)</option>";
+    //     }
+
+    //     return response()->json(['products' => $htmlc]);
+    // }
+
     public function searchProducts(Request $request)
     {
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $products = productStock::select('products.product_title', 'product_stocks.*')
-            ->leftJoin('products', 'product_stocks.product_id', '=', 'products.id')
-            ->where('product_stocks.supplier_id', '=', $request->supplier_id)
-            ->where('product_stocks.store_id', \Auth::guard('admin')->user()->store_id)
-            ->where('product_stocks.quantity', '>', 0)
-            ->groupBy('product_stocks.id')
-            ->orderBy('products.id', 'desc')->get();
+        $products = PurchasedProduct::select('products.product_title', 'purchased_products.*')
+            ->leftJoin('products', 'purchased_products.product_id', '=', 'products.id')
+            ->where('purchased_products.supplier_id', '=', $request->supplier_id)
+            ->where('purchased_products.store_id', $store_id)
+            ->where('purchased_products.quantity', '>', 0)
+            ->groupBy('purchased_products.id')
+            ->orderBy('products.id', 'desc')
+            ->get();
 
         $htmlc = "<option value=''>Select an Option</option>";
         foreach ($products as $p) {
@@ -54,10 +75,23 @@ class PurchaseController extends Controller
         return response()->json(['products' => $htmlc]);
     }
 
+
+    // public function searchProductsDetails(Request $request)
+    // {
+    //     $store_id = \Auth::guard('admin')->user()->store_id;
+    //     $data = productStock::where(['store_id' => $store_id, 'id' => $request->product_id])->first();
+    //     $pdt = DB::table('products')->where(['id' => $data->product_id, 'store_id' => $store_id])->first();
+    //     $unit = DB::table('units')->where(['id' => $pdt->unit_id, 'store_id' => $store_id])->first();
+    //     $grandtotal = $data->buy_price_with_tax * $data->quantity;
+
+    //     $quantity = $data->quantity;
+    //     return response()->json(['data' => $data, 'unit' => $unit->unit_name, 'grandtotal' => $grandtotal]);
+    // }
+
     public function searchProductsDetails(Request $request)
     {
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $data = productStock::where(['store_id' => $store_id, 'id' => $request->product_id])->first();
+        $data = PurchasedProduct::where(['store_id' => $store_id, 'id' => $request->product_id])->first();
         $pdt = DB::table('products')->where(['id' => $data->product_id, 'store_id' => $store_id])->first();
         $unit = DB::table('units')->where(['id' => $pdt->unit_id, 'store_id' => $store_id])->first();
         $grandtotal = $data->buy_price_with_tax * $data->quantity;
@@ -65,6 +99,7 @@ class PurchaseController extends Controller
         $quantity = $data->quantity;
         return response()->json(['data' => $data, 'unit' => $unit->unit_name, 'grandtotal' => $grandtotal]);
     }
+
 
     public function purchaseReturnProducts(Request $request)
     {

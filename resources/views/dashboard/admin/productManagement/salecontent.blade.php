@@ -132,11 +132,11 @@
                                             placeholder="Enter customer name">
                                     </div>
                                     <div class="form-group">
-                                        <input type="email" id="customer_email" class="form-control"
+                                        <input type="email" id="customer_email" class="form-control form-control-sm"
                                             placeholder="Enter customer email">
                                     </div>
-                                    <button type="button" id="save_customer" class="btn btn-primary btn-sm">Save
-                                        Customer</button>
+                                    {{-- <button type="button" id="save_customer" class="btn btn-primary btn-sm">Save
+                                        Customer</button> --}}
                                 </div>
 
                                 <div class="form-group">
@@ -178,7 +178,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-primary" onclick="addToCart()">Add to Cart</button>
+                                <button type="button" id="save_customer" class="btn btn-primary" onclick="addToCart()">Add to Cart</button>
                             </div>
                         </div>
                         {{-- cart table --}}
@@ -257,6 +257,7 @@
                                     <input type="hidden" id="customer_ids" name="customer_ids" value="">
                                     <input type="hidden" id="chequenumber1" name="chequedetail1" value="">
                                     <input type="hidden" id="payment-method1" name="credit" value="">
+                                    <input type="hidden" id="sale_date1" name="sale_date" value="">
                                     <div class="mt-4">
                                         <button type="button" class="btn btn-danger" onclick="clearCart()">Clear
                                             Cart</button>
@@ -470,16 +471,16 @@
             let total = 0;
             cartItems.forEach(function(item, index) {
                 const row = `
-          <tr>
-            <td>${item.name}</td>
-            <td>
-              <input type="number" class="form-control" value="${item.qty}" onchange="updateCartItem(${index}, this.value)"  style="max-width: 80px;">
-            </td>
-            <td>${item.price.toFixed(2)}</td>
-            <td>${item.total.toFixed(2)}</td>
-            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeCartItem(${index})"><i class="fas fa-trash-alt"></i></button></td>
-          </tr>
-        `;
+                <tr>
+                    <td>${item.name}</td>
+                    <td>
+                    <input type="number" class="form-control" value="${item.qty}" onchange="updateCartItem(${index}, this.value)"  style="max-width: 80px;">
+                    </td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${item.total.toFixed(2)}</td>
+                    <td><button type="button" class="btn btn-sm btn-danger" onclick="removeCartItem(${index})"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>
+                `;
                 cartTableBody.insertAdjacentHTML('beforeend', row);
                 total += item.total;
             });
@@ -505,6 +506,7 @@
             const due = grandTotal - paid;
 
             document.getElementById('cart-grand-total').textContent = grandTotal.toFixed(2);
+            document.getElementById('cart-paid').textContent = grandTotal.toFixed(2);
             document.getElementById('cart-due').textContent = due.toFixed(2);
         }
 
@@ -541,28 +543,6 @@
         cartPaid.addEventListener('change', updateGrandTotal);
 
 
-        // function submitCart() {
-
-        //   const discount = parseFloat(document.getElementById('cart-discount').value);
-        //   const paid = parseFloat(document.getElementById('cart-paid').value);
-        //   const customer = document.getElementById('customer_selected').value;
-        //   const chqdetail = document.getElementById('chequenumber').value;
-        //   const acc = document.getElementById('payment-method').value;
-        //   // const credit1 = $('#payment-method').val();
-
-        //   document.getElementById('discount-input').value = discount;
-        //   document.getElementById('paid-input').value = paid;
-        //   document.getElementById('customer_ids').value = customer;
-        //   document.getElementById('chequenumber1').value = chqdetail;
-        //   document.getElementById('payment-method1').value = acc;
-        //   // document.getElementById('payment-method11').value = credit1;
-
-        //   const cartItemsInput = document.getElementById('cart_items');
-        //   cartItemsInput.value = JSON.stringify(cartItems);
-
-
-        //   document.forms[0].submit();
-        // }
 
         async function submitCart() {
             const discount = parseFloat(document.getElementById('cart-discount').value);
@@ -570,12 +550,14 @@
             const customer = document.getElementById('customer_selected').value;
             const chqdetail = document.getElementById('chequenumber').value;
             const acc = document.getElementById('payment-method').value;
+            const sale_date = document.getElementById('sale_date').value;
 
             document.getElementById('discount-input').value = discount;
             document.getElementById('paid-input').value = paid;
             document.getElementById('customer_ids').value = customer;
             document.getElementById('chequenumber1').value = chqdetail;
             document.getElementById('payment-method1').value = acc;
+            document.getElementById('sale_date1').value = sale_date;
 
             const cartItemsInput = document.getElementById('cart_items');
 
@@ -876,8 +858,13 @@
                 let name = $('#customer_name').val().trim();
                 let email = $('#customer_email').val().trim();
 
-                if (!phone || !name) {
-                    alert('Phone and name are required');
+                // ✅ If name is blank, use phone number as name
+                if (!name) {
+                    name = phone;
+                }
+
+                if (!phone) {
+                    alert('Phone is required');
                     return;
                 }
 
@@ -897,7 +884,7 @@
                         alert('Failed to save customer');
                     }
                 }).fail(function(xhr) {
-                    alert('Error saving customer');
+                    // alert('Error saving customer');
                 });
             });
         });

@@ -15,6 +15,7 @@ use App\Models\Admin\Purchase;
 use App\Models\Admin\Sale;
 use App\Models\Admin\Transactions;
 use App\Models\Admin\Unit;
+use App\Models\PurchasedProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -783,7 +784,7 @@ class ProductController extends Controller
 
 
 
-        return response()->json(['code' => 1, 'msg' => 'Brand has been successfully saved', 'html' => $html, 'html1' => $html1]);
+        return response()->json(['code' => 1, 'msg' => 'Cart Item has been removed', 'html' => $html, 'html1' => $html1]);
     }
 
     public function purchaseProducts1(Request $request)
@@ -792,7 +793,70 @@ class ProductController extends Controller
         $allaccount = DB::table('account_types')->select('id', 'account_head_id', 'account_name', 'is_money', 'code')->where(['store_id' => $store_id, 'acctype_status' => 1])->get();
         $inventory = $allaccount->where('account_name', 'Inventory')->pluck('code')->first();
         $discount_received = $allaccount->where('account_name', 'Discount Received')->pluck('code')->first();
-        productStock::insert(session('cart'));
+
+
+        $cart = session('cart');
+
+        foreach ($cart as $item) {
+            $productId = $item['product_id'];
+
+            // Clean nulls and cast
+            $item['tax_value_percent'] = $item['tax_value_percent'] ?? 0;
+            $item['product_type'] = $item['product_type'] ?? '';
+            $item['shelf_id'] = $item['shelf_id'] ?? 0;
+            $item['serial_no'] = $item['serial_no'] ?? '';
+            $item['size'] = $item['size'] ?? '';
+            $item['color'] = $item['color'] ?? '';
+            $item['quantity'] = (float) $item['quantity'];
+            $item['buy_price'] = (float) $item['buy_price'];
+
+            $existingStock = ProductStock::where('product_id', $productId)->first();
+
+            if ($existingStock) {
+                $newQty = $existingStock->quantity + $item['quantity'];
+                $avgPrice = (($existingStock->quantity * $existingStock->buy_price) + ($item['quantity'] * $item['buy_price'])) / $newQty;
+                $avgPrice = number_format($avgPrice, 2, '.', '');
+
+                $existingStock->update([
+                    'quantity'    => $newQty,
+                    'buy_price'   => $avgPrice,
+                    'sell_price'  => $item['sell_price'],
+                    'updated_at'  => now(),
+                ]);
+            } else {
+                ProductStock::create($item);
+            }
+
+            // ✅ Insert into purchased_products
+            PurchasedProduct::create([
+                'invoice_no'          => $item['invoice_no'],
+                'product_id'          => $item['product_id'],
+                'batch_no'            => $item['batch_no'],
+                'supplier_id'         => $item['supplier_id'],
+                'shelf_id'            => $item['shelf_id'],
+                'tax_id'              => $item['tax_id'],
+                'tax_value_percent'   => $item['tax_value_percent'],
+                'barcode'             => $item['barcode'],
+                'serial_no'           => $item['serial_no'],
+                'size'                => $item['size'],
+                'color'               => $item['color'],
+                'buy_price'           => $item['buy_price'],
+                'buy_price_with_tax'  => $item['buy_price_with_tax'],
+                'sell_price'          => $item['sell_price'],
+                'quantity'            => $item['quantity'],
+                'purchase_date'       => $item['purchase_date'],
+                'expired_date'        => $item['expired_date'],
+                'store_id'            => $item['store_id'],
+                'status'              => $item['pdtstk_status'] ?? 1,
+                'post_by'             => $item['post_by'],
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+        }
+
+
+
+
         $total = 0;
         $supplier_id = '';
         $invoice_no = '';

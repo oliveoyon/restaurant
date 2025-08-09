@@ -56,12 +56,7 @@ class AccountsReportController extends Controller
         }
     }
 
-    public function test()
-    {
-        $data = DB::select("select tr.account_head_id, sp.supplier_address, sp.supplier_phone, GROUP_CONCAT(tr.trns_id SEPARATOR ', ') AS invoices , GROUP_CONCAT((tr.amount * tr.direction * ac.normal) SEPARATOR ', ') AS amounts , ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code left join suppliers sp on ac.code = sp.parent_id WHERE ((tr.account_head_id LIKE '2%') AND (tr.trns_date BETWEEN '2023-02-01' AND '2023-02-09') AND tr.store_id = 101 ) group by account_name order by tr.account_head_id, ac.account_name;");
 
-        dd($data);
-    }
 
     public function datewisepayable(Request $request)
     {
@@ -121,37 +116,34 @@ class AccountsReportController extends Controller
             $msg = $from_date1 . " to " . $to_date1;
             $data['datetime'] = $msg;
             $data['settings'] = DB::table('general_settings')->where(['store_id' => $store_id])->first();
-            // $data['suppliers'] = DB::select("select tr.account_head_id, sp.supplier_address, sp.supplier_phone, GROUP_CONCAT(tr.trns_id SEPARATOR ', ') AS invoices , GROUP_CONCAT((tr.amount * tr.direction * ac.normal) SEPARATOR ', ') AS amounts , ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code left join suppliers sp on ac.code = sp.parent_id WHERE (tr.account_head_id LIKE '$request->supplier_id' AND (tr.trns_date BETWEEN '$from_date' AND '$to_date') AND tr.store_id = 101 ) group by account_name order by tr.account_head_id, ac.account_name;");
 
             if ($request->supplier_id == 'all') {
-                $data['products'] = DB::table('product_stocks')
-                    ->join('products', 'products.id', '=', 'product_stocks.product_id')
-                    ->join('suppliers', 'suppliers.id', '=', 'product_stocks.supplier_id')
-                    ->where('product_stocks.invoice_no', 'like', 'PI-%')
-                    ->where('product_stocks.store_id', '=', $store_id)
-                    ->whereBetween('product_stocks.purchase_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
-                    ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name')
+                $data['products'] = DB::table('purchased_products')
+                    ->join('products', 'products.id', '=', 'purchased_products.product_id')
+                    ->join('suppliers', 'suppliers.id', '=', 'purchased_products.supplier_id')
+                    ->where('purchased_products.invoice_no', 'like', 'PI-%')
+                    ->where('purchased_products.store_id', '=', $store_id)
+                    ->whereBetween('purchased_products.purchase_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
+                    ->select('purchased_products.*', 'products.product_title', 'suppliers.supplier_name')
                     ->get();
             } else {
-                $data['products'] = DB::table('product_stocks')
-                    ->join('products', 'products.id', '=', 'product_stocks.product_id')
-                    ->join('suppliers', 'suppliers.id', '=', 'product_stocks.supplier_id')
-                    ->where('product_stocks.invoice_no', 'like', 'PI-%')
-                    ->where('product_stocks.store_id', '=', $store_id)
-                    ->where('product_stocks.supplier_id', '=', $request->supplier_id)
-                    ->whereBetween('product_stocks.purchase_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
-                    ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name')
+                $data['products'] = DB::table('purchased_products')
+                    ->join('products', 'products.id', '=', 'purchased_products.product_id')
+                    ->join('suppliers', 'suppliers.id', '=', 'purchased_products.supplier_id')
+                    ->where('purchased_products.invoice_no', 'like', 'PI-%')
+                    ->where('purchased_products.store_id', '=', $store_id)
+                    ->where('purchased_products.supplier_id', '=', $request->supplier_id)
+                    ->whereBetween('purchased_products.purchase_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
+                    ->select('purchased_products.*', 'products.product_title', 'suppliers.supplier_name')
                     ->get();
             }
+
             $file_name = 'purchase_product_' . $store_id . '.pdf';
             $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4-L']);
             $mpdf->WriteHTML(view('dashboard.admin.reports.accounts.purchase_products', $data));
             $mpdf->Output($file_name, 'F');
+
             $fname = '<button class="btn btn-success" onclick="myfunctionName(\'http://127.0.0.1:8000/' . $file_name . '\')">Print</button>';
-
-
-            //return view('dashboard.admin.reports.accounts.purchase_products', $data);
-
 
             $html1 = view('dashboard.admin.reports.accounts.purchase_products', $data)->render();
 
@@ -162,6 +154,7 @@ class AccountsReportController extends Controller
             }
         }
     }
+
 
     public function purchaseinvoice(Request $request)
     {
@@ -230,14 +223,79 @@ class AccountsReportController extends Controller
     public static function getPurchaseDetail($inv)
     {
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $detail = DB::table('product_stocks')
-            ->join('products', 'products.id', '=', 'product_stocks.product_id')
-            ->where('product_stocks.invoice_no', '=', $inv)
-            ->where('product_stocks.store_id', '=', $store_id)
-            ->select('product_stocks.*', 'products.product_title')
+
+        $detail = DB::table('purchased_products')
+            ->join('products', 'products.id', '=', 'purchased_products.product_id')
+            ->where('purchased_products.invoice_no', '=', $inv)
+            ->where('purchased_products.store_id', '=', $store_id)
+            ->select('purchased_products.*', 'products.product_title')
             ->get();
+
         return $detail;
     }
+
+
+    // public function purchasereturn(Request $request)
+    // {
+    //     $store_id = \Auth::guard('admin')->user()->store_id;
+    //     $messages = [
+    //         'from_date.required' => 'From Date is Required',
+    //         'to_date.required' => 'To Date is Required',
+    //         'to_date.after_or_equal' => 'To Date must be equal or greater than From Date',
+    //     ];
+    //     $validator = \Validator::make($request->all(), [
+    //         'from_date' => 'required|date',
+    //         'to_date' => 'date|after_or_equal:from_date'
+    //     ], $messages);
+
+    //     if (!$validator->passes()) {
+    //         return response()->json(['code' => 0, 'error' => $validator->errors()->toArray()]);
+    //     } else {
+    //         $from_date = Carbon::createFromFormat('m/d/Y', $request->from_date)->format('Y-m-d');
+    //         $to_date = Carbon::createFromFormat('m/d/Y', $request->to_date)->format('Y-m-d');
+    //         $from_date1 = Carbon::createFromFormat('m/d/Y', $request->from_date)->format('F j, Y');
+    //         $to_date1 = Carbon::createFromFormat('m/d/Y', $request->to_date)->format('F j, Y');
+    //         $msg = $from_date1 . " to " . $to_date1;
+    //         $data['datetime'] = $msg;
+    //         $data['settings'] = DB::table('general_settings')->where(['store_id' => $store_id])->first();
+    //         // $data['suppliers'] = DB::select("select tr.account_head_id, sp.supplier_address, sp.supplier_phone, GROUP_CONCAT(tr.trns_id SEPARATOR ', ') AS invoices , GROUP_CONCAT((tr.amount * tr.direction * ac.normal) SEPARATOR ', ') AS amounts , ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code left join suppliers sp on ac.code = sp.parent_id WHERE (tr.account_head_id LIKE '$request->supplier_id' AND (tr.trns_date BETWEEN '$from_date' AND '$to_date') AND tr.store_id = 101 ) group by account_name order by tr.account_head_id, ac.account_name;");
+
+    //         if ($request->supplier_id == 'all') {
+    //             $data['products'] = DB::table('purchase_returns')
+    //                 ->join('products', 'products.id', '=', 'purchase_returns.product_id')
+    //                 ->join('suppliers', 'suppliers.id', '=', 'purchase_returns.supplier_id')
+    //                 ->join('product_stocks', 'product_stocks.id', '=', 'purchase_returns.pdtstock_id')
+    //                 ->where('purchase_returns.store_id', '=', $store_id)
+    //                 ->whereBetween('purchase_returns.return_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
+    //                 ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')
+    //                 ->get();
+    //         } else {
+    //             $data['products'] = DB::table('purchase_returns')
+    //                 ->join('products', 'products.id', '=', 'purchase_returns.product_id')
+    //                 ->join('suppliers', 'suppliers.id', '=', 'purchase_returns.supplier_id')
+    //                 ->join('product_stocks', 'product_stocks.id', '=', 'purchase_returns.pdtstock_id')
+    //                 ->where('purchase_returns.store_id', '=', $store_id)
+    //                 ->where('purchase_returns.supplier_id', '=', $request->supplier_id)
+    //                 ->whereBetween('purchase_returns.return_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
+    //                 ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')
+    //                 ->get();
+    //         }
+    //         $file_name = 'return_product_' . $store_id . '.pdf';
+    //         $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4-L']);
+    //         $mpdf->WriteHTML(view('dashboard.admin.reports.accounts.return_products', $data));
+    //         $mpdf->Output($file_name, 'F');
+    //         $fname = '<button class="btn btn-success" onclick="myfunctionName(\'http://127.0.0.1:8000/' . $file_name . '\')">Print</button>';
+
+
+    //         $html1 = view('dashboard.admin.reports.accounts.return_products', $data)->render();
+
+    //         if (!$data) {
+    //             return response()->json(['code' => 0, 'msg' => 'Something went wrong']);
+    //         } else {
+    //             return response()->json(['code' => 1, 'msg' => $msg, 'html1' => $html1, 'fname' => $fname]);
+    //         }
+    //     }
+    // }
 
     public function purchasereturn(Request $request)
     {
@@ -262,34 +320,33 @@ class AccountsReportController extends Controller
             $msg = $from_date1 . " to " . $to_date1;
             $data['datetime'] = $msg;
             $data['settings'] = DB::table('general_settings')->where(['store_id' => $store_id])->first();
-            // $data['suppliers'] = DB::select("select tr.account_head_id, sp.supplier_address, sp.supplier_phone, GROUP_CONCAT(tr.trns_id SEPARATOR ', ') AS invoices , GROUP_CONCAT((tr.amount * tr.direction * ac.normal) SEPARATOR ', ') AS amounts , ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code left join suppliers sp on ac.code = sp.parent_id WHERE (tr.account_head_id LIKE '$request->supplier_id' AND (tr.trns_date BETWEEN '$from_date' AND '$to_date') AND tr.store_id = 101 ) group by account_name order by tr.account_head_id, ac.account_name;");
 
             if ($request->supplier_id == 'all') {
                 $data['products'] = DB::table('purchase_returns')
                     ->join('products', 'products.id', '=', 'purchase_returns.product_id')
                     ->join('suppliers', 'suppliers.id', '=', 'purchase_returns.supplier_id')
-                    ->join('product_stocks', 'product_stocks.id', '=', 'purchase_returns.pdtstock_id')
+                    ->join('purchased_products', 'purchased_products.id', '=', 'purchase_returns.pdtstock_id')  // changed here
                     ->where('purchase_returns.store_id', '=', $store_id)
                     ->whereBetween('purchase_returns.return_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
-                    ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')
+                    ->select('purchased_products.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')  // changed here
                     ->get();
             } else {
                 $data['products'] = DB::table('purchase_returns')
                     ->join('products', 'products.id', '=', 'purchase_returns.product_id')
                     ->join('suppliers', 'suppliers.id', '=', 'purchase_returns.supplier_id')
-                    ->join('product_stocks', 'product_stocks.id', '=', 'purchase_returns.pdtstock_id')
+                    ->join('purchased_products', 'purchased_products.id', '=', 'purchase_returns.pdtstock_id')  // changed here
                     ->where('purchase_returns.store_id', '=', $store_id)
                     ->where('purchase_returns.supplier_id', '=', $request->supplier_id)
                     ->whereBetween('purchase_returns.return_date', [$from_date . ' 00:00:00', $to_date . ' 23:59:59'])
-                    ->select('product_stocks.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')
+                    ->select('purchased_products.*', 'products.product_title', 'suppliers.supplier_name', 'purchase_returns.*')  // changed here
                     ->get();
             }
+
             $file_name = 'return_product_' . $store_id . '.pdf';
             $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4-L']);
             $mpdf->WriteHTML(view('dashboard.admin.reports.accounts.return_products', $data));
             $mpdf->Output($file_name, 'F');
             $fname = '<button class="btn btn-success" onclick="myfunctionName(\'http://127.0.0.1:8000/' . $file_name . '\')">Print</button>';
-
 
             $html1 = view('dashboard.admin.reports.accounts.return_products', $data)->render();
 
@@ -300,6 +357,7 @@ class AccountsReportController extends Controller
             }
         }
     }
+
 
     public function accountsReport()
     {
@@ -503,14 +561,51 @@ class AccountsReportController extends Controller
         $num = (int) $num;
         $words = array();
         $list1 = array(
-            '', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-            'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'
+            '',
+            'one',
+            'two',
+            'three',
+            'four',
+            'five',
+            'six',
+            'seven',
+            'eight',
+            'nine',
+            'ten',
+            'eleven',
+            'twelve',
+            'thirteen',
+            'fourteen',
+            'fifteen',
+            'sixteen',
+            'seventeen',
+            'eighteen',
+            'nineteen'
         );
         $list2 = array('', 'ten', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred');
         $list3 = array(
-            '', 'thousand', 'million', 'billion', 'trillion', 'quadrillion', 'quintillion', 'sextillion', 'septillion',
-            'octillion', 'nonillion', 'decillion', 'undecillion', 'duodecillion', 'tredecillion', 'quattuordecillion',
-            'quindecillion', 'sexdecillion', 'septendecillion', 'octodecillion', 'novemdecillion', 'vigintillion'
+            '',
+            'thousand',
+            'million',
+            'billion',
+            'trillion',
+            'quadrillion',
+            'quintillion',
+            'sextillion',
+            'septillion',
+            'octillion',
+            'nonillion',
+            'decillion',
+            'undecillion',
+            'duodecillion',
+            'tredecillion',
+            'quattuordecillion',
+            'quindecillion',
+            'sexdecillion',
+            'septendecillion',
+            'octodecillion',
+            'novemdecillion',
+            'vigintillion'
         );
         $num_length = strlen($num);
         $levels = (int) (($num_length + 2) / 3);
