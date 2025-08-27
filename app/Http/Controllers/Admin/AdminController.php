@@ -24,6 +24,16 @@ class AdminController extends Controller
         $data['todaypurchase'] = DB::select("SELECT SUM(total) as totals FROM purchases WHERE store_id = $store_id AND purchase_date LIKE '$today%';");
         $data['receivable'] = DB::select("select tr.account_head_id, ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code WHERE tr.account_head_id LIKE '1%' AND ac.acc_type = 'customer' AND tr.store_id = $store_id order by tr.account_head_id, ac.account_name;");
         $data['payable'] = DB::select("select tr.account_head_id, ac.account_name, sum(tr.amount * tr.direction * ac.normal) as balance from transactions tr left join account_types ac on tr.account_head_id = ac.code WHERE tr.account_head_id LIKE '2%' AND ac.acc_type = 'supplier' AND tr.store_id = $store_id order by tr.account_head_id, ac.account_name;");
+        $data['lastSixMonthsSales'] = $this->getLastSixMonthsSales($store_id);
+        $data['last30DaysSales'] = $this->getLast30DaysSales($store_id);
+        $data['lastSixMonthsExpenditure'] = $this->getLastSixMonthsExpenditure($store_id);
+        $data['last30DaysExpenditure'] = $this->getLast30DaysExpenditure($store_id);
+        $data['lastSixMonthsPurchase'] = $this->getLastSixMonthsPurchase($store_id);
+        $data['last30DaysPurchase'] = $this->getLast30DaysPurchase($store_id);
+        $data['topSellingProducts'] = $this->getTopSellingProductsLastSixMonths($store_id);
+        $data['topSellingProducts30Days'] = $this->getTopSellingProductsLast30Days($store_id);
+        $data['topCustomers'] = $this->getTopCustomersLastSixMonths($store_id);
+        $data['topCustomers30Days'] = $this->getTopCustomersLast30Days($store_id);
         return view('dashboard.admin.home', $data);
     }
 
@@ -150,5 +160,162 @@ class AdminController extends Controller
         //Auth::logout(); it will also work, or we can specify like bellow line as guard name
         Auth::guard('admin')->logout();
         return redirect('/');
+    }
+
+    private function getLastSixMonthsSales($store_id)
+    {
+        return DB::table('sales')
+            ->selectRaw("DATE_FORMAT(created_at, '%b %Y') as month, SUM(total) as total_sales")
+            ->where('store_id', $store_id)
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderByRaw("MIN(created_at)")
+            ->get();
+    }
+
+    private function getLast30DaysSales($store_id)
+    {
+        return DB::table('sales')
+            ->selectRaw("DATE_FORMAT(created_at, '%d-%b') as day, SUM(total) as total_sales")
+            ->where('store_id', $store_id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('day')
+            ->orderByRaw("MIN(created_at)")
+            ->get();
+    }
+
+    private function getLastSixMonthsExpenditure($store_id)
+    {
+        $expData = DB::table('expenditures')
+            ->selectRaw("DATE_FORMAT(exp_date, '%b %Y') as month, SUM(amount) as total_exp")
+            ->where('store_id', $store_id)
+            ->where('exp_date', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderByRaw("MIN(exp_date)")
+            ->get();
+
+        return [
+            'months' => $expData->pluck('month'),
+            'totals' => $expData->pluck('total_exp')
+        ];
+    }
+
+    private function getLast30DaysExpenditure($store_id)
+    {
+        $expData = DB::table('expenditures')
+            ->selectRaw("DATE_FORMAT(exp_date, '%d-%b') as day, SUM(amount) as total_exp")
+            ->where('store_id', $store_id)
+            ->where('exp_date', '>=', now()->subDays(30))
+            ->groupBy('day')
+            ->orderByRaw("MIN(exp_date)")
+            ->get();
+
+        return [
+            'days' => $expData->pluck('day'),
+            'totals' => $expData->pluck('total_exp')
+        ];
+    }
+
+    private function getLastSixMonthsPurchase($store_id)
+    {
+        $purchaseData = DB::table('purchases')
+            ->selectRaw("DATE_FORMAT(purchase_date, '%b %Y') as month, SUM(total) as total_purchase")
+            ->where('store_id', $store_id)
+            ->where('purchase_date', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderByRaw("MIN(purchase_date)")
+            ->get();
+
+        return [
+            'months' => $purchaseData->pluck('month'),
+            'totals' => $purchaseData->pluck('total_purchase')
+        ];
+    }
+
+    private function getLast30DaysPurchase($store_id)
+    {
+        $purchaseData = DB::table('purchases')
+            ->selectRaw("DATE_FORMAT(purchase_date, '%d-%b') as day, SUM(total) as total_purchase")
+            ->where('store_id', $store_id)
+            ->where('purchase_date', '>=', now()->subDays(30))
+            ->groupBy('day')
+            ->orderByRaw("MIN(purchase_date)")
+            ->get();
+
+        return [
+            'days' => $purchaseData->pluck('day'),
+            'totals' => $purchaseData->pluck('total_purchase')
+        ];
+    }
+
+    private function getTopSellingProductsLastSixMonths($store_id)
+    {
+        $topProducts = DB::table('sale_products as sp')
+            ->join('products as p', 'sp.product_id', '=', 'p.id')
+            ->selectRaw('p.product_title, SUM(sp.quantity) as total_quantity')
+            ->where('sp.store_id', $store_id)
+            ->where('sp.created_at', '>=', now()->subMonths(6))
+            ->groupBy('sp.product_id', 'p.product_title')
+            ->orderByDesc('total_quantity')
+            ->limit(10)
+            ->get();
+
+        return [
+            'products' => $topProducts->pluck('product_title'),
+            'quantities' => $topProducts->pluck('total_quantity')
+        ];
+    }
+
+    private function getTopSellingProductsLast30Days($store_id)
+    {
+        $topProducts = DB::table('sale_products as sp')
+            ->join('products as p', 'sp.product_id', '=', 'p.id')
+            ->selectRaw('p.product_title, SUM(sp.quantity) as total_quantity')
+            ->where('sp.store_id', $store_id)
+            ->where('sp.created_at', '>=', now()->subDays(30))
+            ->groupBy('sp.product_id', 'p.product_title')
+            ->orderByDesc('total_quantity')
+            ->limit(10)
+            ->get();
+
+        return [
+            'products' => $topProducts->pluck('product_title'),
+            'quantities' => $topProducts->pluck('total_quantity')
+        ];
+    }
+
+    private function getTopCustomersLastSixMonths($store_id)
+    {
+        $topCustomers = DB::table('sales as s')
+            ->join('customers as c', 's.customer_id', '=', 'c.parent_id')
+            ->selectRaw('c.customer_name, SUM(s.total) as total_sales')
+            ->where('s.store_id', $store_id)
+            ->where('s.created_at', '>=', now()->subMonths(6))
+            ->groupBy('s.customer_id', 'c.customer_name')
+            ->orderByDesc('total_sales')
+            ->limit(10)
+            ->get();
+
+        return [
+            'customers' => $topCustomers->pluck('customer_name'),
+            'totals' => $topCustomers->pluck('total_sales')
+        ];
+    }
+    private function getTopCustomersLast30Days($store_id)
+    {
+        $topCustomers = DB::table('sales as s')
+            ->join('customers as c', 's.customer_id', '=', 'c.parent_id')
+            ->selectRaw('c.customer_name, SUM(s.total) as total_sales')
+            ->where('s.store_id', $store_id)
+            ->where('s.created_at', '>=', now()->subDays(30))
+            ->groupBy('s.customer_id', 'c.customer_name')
+            ->orderByDesc('total_sales')
+            ->limit(10)
+            ->get();
+
+        return [
+            'customers' => $topCustomers->pluck('customer_name'),
+            'totals' => $topCustomers->pluck('total_sales')
+        ];
     }
 }

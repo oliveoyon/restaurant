@@ -1,22 +1,20 @@
 @extends('dashboard.admin.layouts.admin-layout')
-@section('title', __('Supplier Ledger'))
+@section('title', 'Supplier Ledger')
 
 @section('content')
-    <div class="content-wrapper">
-        <div class="content-header">
-            <div class="container-fluid">
-                <br>
-            </div>
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <h1 class="m-0">Supplier Ledger for: {{ $supplier->supplier_name }}</h1>
+            <p>Period: {{ \Carbon\Carbon::parse($from)->format('j F Y') }} to {{ \Carbon\Carbon::parse($to)->format('j F Y') }}</p>
         </div>
+    </div>
 
-        <section class="content">
-            <div class="container-fluid">
-                <div class="card card-info card-outline">
-                    <div class="card-body table-responsive">
-                        <h4>Supplier Ledger for: {{ $supplier->supplier_name }}</h4>
-                        <p>Period: {{ $from->format('j F Y') }} &mdash; {{ $to->format('j F Y') }}</p>
-
-                        <table class="table table-bordered table-striped">
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card card-info card-outline">
+                <div class="card-body table-responsive">
+                    <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -48,9 +46,9 @@
                             @endif
                         </tbody>
                     </table>
-                    </div>
                 </div>
             </div>
-        </section>
-    </div>
+        </div>
+    </section>
+</div>
 @endsection

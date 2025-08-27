@@ -425,16 +425,18 @@ class AccountsReportController extends Controller
             $msg = "Expenditure as on " . $from_date1 . " to " . $to_date1;
             $data['datetime'] = $msg;
             $data['settings'] = DB::table('general_settings')->where(['store_id' => $store_id])->first();
-            $whr = [
-                'expenditures.acc_head_id' => $request->acc_head_id,
-                'expenditures.store_id' => $store_id
-            ];
-            $whr = array_filter($whr);
+            $conditions = "ats.account_head_id = 3 AND tr.store_id = $store_id AND tr.trns_date BETWEEN '$from_date' AND '$to_date'";
 
+            if (!empty($request->acc_head_id)) {
+                $conditions .= " AND tr.account_head_id = {$request->acc_head_id}";
+            }
 
+            $data['info'] = DB::select("SELECT (tr.amount * tr.direction * ats.normal) AS Exp, tr.trns_id, tr.trns_date, tr.description, ats.account_name, exps.description as expdesc 
+            FROM transactions tr 
+            LEFT JOIN account_types ats ON ats.code = tr.account_head_id 
+            LEFT JOIN expenditures exps ON tr.trns_id = exps.invoice_no 
+            WHERE $conditions;");
 
-            $data['info'] = DB::select("SELECT (tr.amount * tr.direction * ats.normal) AS Exp, tr.trns_id, tr.trns_date, tr.description, ats.account_name, exps.description as expdesc FROM transactions tr LEFT JOIN account_types ats ON ats.code = tr.account_head_id LEFT JOIN expenditures exps ON tr.trns_id = exps.invoice_no WHERE ats.account_head_id = 3 AND tr.store_id = $store_id AND tr.trns_date BETWEEN '$from_date' AND '$to_date';");
-            // dd($data['info']);
 
             $html1 = view('dashboard.admin.accountManagement.expenditureInvoice', $data)->render();
 

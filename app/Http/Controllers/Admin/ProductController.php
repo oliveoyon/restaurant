@@ -10,7 +10,7 @@ use App\Models\Admin\DamageProducts;
 use App\Models\Admin\Location;
 use App\Models\Admin\Product;
 use App\Models\Admin\Manufacturer;
-use App\Models\Admin\productStock;
+use App\Models\Admin\ProductStock;
 use App\Models\Admin\Purchase;
 use App\Models\Admin\Sale;
 use App\Models\Admin\Transactions;
@@ -272,6 +272,19 @@ class ProductController extends Controller
         }
     }
 
+    public function getSuggestions(Request $request)
+    {
+        $query = $request->get('query');
+
+        // Fetch products matching the query
+        $products = Product::where('product_title', 'like', "%{$query}%")
+            ->limit(5)
+            ->pluck('product_title');
+
+        return response()->json($products);
+    }
+
+
     public function addProducts(Request $request)
     {
 
@@ -374,7 +387,7 @@ class ProductController extends Controller
 
     public function addProductToStock(Request $request)
     {
-        $product = new productStock();
+        $product = new ProductStock();
 
         $store_id = \Auth::guard('admin')->user()->store_id;
         $productDetails = Product::where(['product_hash_id' => $request->hashId, 'store_id' => $store_id])->first();
@@ -409,7 +422,7 @@ class ProductController extends Controller
             }
 
 
-            $product = new productStock();
+            $product = new ProductStock();
 
 
             $save_data = [];
@@ -446,7 +459,7 @@ class ProductController extends Controller
                 ];
             }
 
-            $query = productStock::insert($save_data);
+            $query = ProductStock::insert($save_data);
             // $query = $product->save($save_data);
             if (!$query) {
                 return response()->json(['code' => 0, 'msg' => 'Something went wrong']);
@@ -486,7 +499,7 @@ class ProductController extends Controller
     {
 
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $stock = productStock::where(['store_id' => $store_id, 'product_id' => $request->search_string])->sum('quantity');
+        $stock = ProductStock::where(['store_id' => $store_id, 'product_id' => $request->search_string])->sum('quantity');
         $stocks = Product::select('unit_id')->where(['store_id' => $store_id, 'id' => $request->search_string])->first();
         $unit = Unit::select('id', 'unit_name')->where(['store_id' => $store_id, 'id' => $stocks->unit_id])->first();
         $unit = $unit->unit_name;
@@ -510,7 +523,7 @@ class ProductController extends Controller
     public function purchaseProducts(Request $request)
     {
 
-        $product = new productStock();
+        $product = new ProductStock();
 
         $store_id = \Auth::guard('admin')->user()->store_id;
         $productDetails = Product::where(['id' => $request->product_id, 'store_id' => $store_id])->first();
@@ -789,6 +802,7 @@ class ProductController extends Controller
 
     public function purchaseProducts1(Request $request)
     {
+        $paidDate = Carbon::parse($request->purchaseDate)->toDatetimeString();
         $store_id = \Auth::guard('admin')->user()->store_id;
         $allaccount = DB::table('account_types')->select('id', 'account_head_id', 'account_name', 'is_money', 'code')->where(['store_id' => $store_id, 'acctype_status' => 1])->get();
         $inventory = $allaccount->where('account_name', 'Inventory')->pluck('code')->first();
@@ -821,13 +835,13 @@ class ProductController extends Controller
                     'quantity'    => $newQty,
                     'buy_price'   => $avgPrice,
                     'sell_price'  => $item['sell_price'],
-                    'updated_at'  => now(),
+                    'updated_at'  => $paidDate,
                 ]);
             } else {
                 ProductStock::create($item);
             }
 
-            // ✅ Insert into purchased_products
+            //  Insert into purchased_products
             PurchasedProduct::create([
                 'invoice_no'          => $item['invoice_no'],
                 'product_id'          => $item['product_id'],
@@ -853,9 +867,6 @@ class ProductController extends Controller
                 'updated_at'          => now(),
             ]);
         }
-
-
-
 
         $total = 0;
         $supplier_id = '';
@@ -899,7 +910,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in cash ' . $paid,
                 'amount' => $paid,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -908,7 +919,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in cash ' . $paid,
                 'amount' => $paid,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -921,7 +932,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in cash with discount ' . $discount,
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -930,7 +941,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in cash with discount ' . $discount,
                 'amount' => $paid,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -939,7 +950,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in cash with discount ' . $discount,
                 'amount' => $discount,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -952,7 +963,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased in on credit Pertialy',
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -961,7 +972,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit Pertially',
                 'amount' => $due,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -970,7 +981,7 @@ class ProductController extends Controller
                 'description' => '--Goods purchased on credit with some cash ' . $paid,
                 'amount' => $paid,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -983,7 +994,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit',
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -992,7 +1003,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit',
                 'amount' => $due,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -1005,7 +1016,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit with discount',
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -1014,7 +1025,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit with discount',
                 'amount' => $due,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -1023,7 +1034,7 @@ class ProductController extends Controller
                 'description' => 'Goods purchased on credit with discount',
                 'amount' => $discount,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -1036,7 +1047,7 @@ class ProductController extends Controller
                 'description' => '--Goods purchased on credit with discount',
                 'amount' => $total,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -1045,7 +1056,7 @@ class ProductController extends Controller
                 'description' => '--Goods purchased in cash ' . $paid,
                 'amount' => $paid,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -1054,7 +1065,7 @@ class ProductController extends Controller
                 'description' => '--Goods purchased on credit with discount',
                 'amount' => $due,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -1063,7 +1074,7 @@ class ProductController extends Controller
                 'description' => '--Goods purchased on credit with discount',
                 'amount' => $discount,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -1092,7 +1103,7 @@ class ProductController extends Controller
     {
         // $product = new Sale();
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $productDetails = productStock::select('product_id')->where(['id' => $request->pdtstock_id, 'store_id' => $store_id])->first();
+        $productDetails = ProductStock::select('product_id')->where(['id' => $request->pdtstock_id, 'store_id' => $store_id])->first();
         $messages = [
             'invoice_no.required' => 'Invoice No is Required',
             'search.required' => 'Product Name is Required',
@@ -1254,7 +1265,10 @@ class ProductController extends Controller
 
     public function stockDamageAction(Request $request)
     {
-        // dd(session('pdtdamagecart'));
+        $damageCart = session('pdtdamagecart');
+        $firstItem = array_values($damageCart)[0];
+        $formattedDate = \Carbon\Carbon::parse($firstItem['damage_date'])->format('Y-m-d');
+
         $store_id = \Auth::guard('admin')->user()->store_id;
         $allaccount = DB::table('account_types')->select('id', 'account_head_id', 'account_name', 'is_money', 'code')->where(['store_id' => $store_id, 'acctype_status' => 1])->get();
         $damage_expense = $allaccount->where('account_name', 'Damage Expense')->pluck('code')->first();
@@ -1278,7 +1292,7 @@ class ProductController extends Controller
             'description' => 'Goods Damaged',
             'amount' => $total,
             'direction' => 1,
-            'trns_date' => date('Y-m-d'),
+            'trns_date' => $formattedDate,
             'store_id' => $store_id
         ];
         $save_data[] = [
@@ -1287,7 +1301,7 @@ class ProductController extends Controller
             'description' => 'Goods Damaged',
             'amount' => $total,
             'direction' => -1,
-            'trns_date' => date('Y-m-d'),
+            'trns_date' => $formattedDate,
             'store_id' => $store_id
         ];
         Transactions::insert($save_data);

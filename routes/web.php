@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\RecipeController;
 use App\Http\Controllers\Admin\ProductionController;
+use App\Http\Controllers\Admin\ProductPriceController;
 use App\Http\Controllers\Admin\WalletReceivableController;
 use App\Http\Controllers\CustomerLedgerController;
 use App\Http\Controllers\LedgerController;
@@ -142,6 +143,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('addbrandinpdt', [ProductController::class, 'addbrandinpdt'])->name('addbrandinpdt');
         Route::post('addunitinpdt', [ProductController::class, 'addunitinpdt'])->name('addunitinpdt');
         Route::post('addshelfinpdt', [ProductController::class, 'addshelfinpdt'])->name('addshelfinpdt');
+        Route::get('/products/suggestions', [ProductController::class, 'getSuggestions'])->name('products.suggestions');
         Route::post('addProducts', [ProductController::class, 'addProducts'])->name('addProducts');
         Route::post('addProductToStock', [ProductController::class, 'addProductToStock'])->name('addProductToStock');
         Route::post('deletePdtCart', [ProductController::class, 'deletePdtCart'])->name('deletePdtCart');
@@ -272,8 +274,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('sale', [ProductManagementController::class, 'sale'])->name('sale');
         Route::post('save', [ProductManagementController::class, 'save'])->name('save');
         Route::get('search', [ProductManagementController::class, 'search'])->name('search');
-Route::post('/customers/check-phone', [ProductManagementController::class, 'checkPhone'])->name('customers.checkPhone');
-Route::post('/customers', [ProductManagementController::class, 'store'])->name('customers.store');
+        Route::post('/customers/check-phone', [ProductManagementController::class, 'checkPhone'])->name('customers.checkPhone');
+        Route::post('/customers', [ProductManagementController::class, 'store'])->name('customers.store');
 
 
         Route::get('printBarcode', [SalesController::class, 'printBarcode'])->name('printBarcode');
@@ -286,7 +288,13 @@ Route::post('/customers', [ProductManagementController::class, 'store'])->name('
         Route::post('/recipes', [RecipeController::class, 'store'])->name('recipes.store');
         Route::get('/recipes', [RecipeController::class, 'index'])->name('recipes.index');
         Route::get('/recipes/{product_id}', [RecipeController::class, 'showRecipeDetails'])->name('recipes.details');
+        Route::get('/recipes/{product_id}/edit', [RecipeController::class, 'edit'])->name('recipes.edit');
+        Route::put('/recipes/{product_id}', [RecipeController::class, 'update'])->name('recipes.update');
 
+        
+        
+        
+        
         Route::resource('productions', \App\Http\Controllers\Admin\ProductionController::class);
         Route::post('productions/get-recipe', [\App\Http\Controllers\Admin\ProductionController::class, 'getRecipe'])->name('productions.get-recipe');
 
@@ -300,6 +308,8 @@ Route::post('/customers', [ProductManagementController::class, 'store'])->name('
 
         Route::get('ledger', [LedgerController::class, 'showForm'])->name('ledger.form');
         Route::post('ledger', [LedgerController::class, 'ledgerView'])->name('ledger.view');
+        Route::get('/ledger/transaction/{trns_id}', [LedgerController::class, 'getTransactionDetails'])->name('ledger.transaction.details');
+
 
         Route::get('/supplier-ledger', [SupplierLedgerController::class, 'index'])->name('ledger.supplier.index');
         Route::post('/supplier-ledger/view', [SupplierLedgerController::class, 'view'])->name('ledger.supplier.view');
@@ -318,12 +328,13 @@ Route::post('/customers', [ProductManagementController::class, 'store'])->name('
         Route::post('current-liabilities/generate', [ProfitLossController::class, 'currentLiabilitiesReport'])->name('current-liabilities.generate');
 
         Route::get('/edit-product-sell-price', [ProductManagementController::class, 'editProductPriceForm'])->name('edit.product.price.form');
-Route::post('/get-products-by-category', [ProductManagementController::class, 'getProductsByCategory'])->name('get.products.by.category');
-Route::post('/get-product-batch-stock', [ProductManagementController::class, 'getProductBatchStock'])->name('get.product.batch.stock');
-Route::post('/update-sell-prices', [ProductManagementController::class, 'updateSellPrices'])->name('update.sell.prices');
+        Route::post('/get-products-by-category', [ProductManagementController::class, 'getProductsByCategory'])->name('get.products.by.category');
+        Route::post('/get-product-batch-stock', [ProductManagementController::class, 'getProductBatchStock'])->name('get.product.batch.stock');
+        Route::post('/update-sell-prices', [ProductManagementController::class, 'updateSellPrices'])->name('update.sell.prices');
 
-        
-
-
+        Route::get('/edit-product-prices', [ProductPriceController::class, 'editForm'])->name('edit.product.prices');
+        Route::post('/get-products-by-category', [ProductPriceController::class, 'getProductsByCategory'])->name('get.products.by.category');
+        Route::post('/get-product-batch-stock', [ProductPriceController::class, 'getProductBatchStock'])->name('get.product.batch.stock');
+        Route::post('/update-product-prices', [ProductPriceController::class, 'updatePrices'])->name('update.product.prices');
     });
 });

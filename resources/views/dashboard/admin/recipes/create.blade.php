@@ -101,7 +101,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label for="unit">Unit</label>
-                                        <select name="unit[]" class="form-control unit-select" required>
+                                        <select name="unit[]" class="form-control unit-select lock-dropdown" readonly="" required>
                                             <option value="">Select Unit</option>
                                             @foreach ($units as $unit)
                                                 <option value="{{ $unit->unit_name }}" data-id="{{ $unit->id }}">
@@ -146,6 +146,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-bs4.min.js"></script>
     @include('dashboard.admin.adminjs.addproductjs')
+    
+    <script>
+        document.addEventListener('mousedown', function(e) {
+            if (e.target.classList.contains('lock-dropdown')) {
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.target.classList.contains('lock-dropdown')) {
+                e.preventDefault();
+            }
+        });
+
+    </script>
+    
+    
+    
+    
+    
     <script>
         $(function() {
             $('.summernote').summernote();

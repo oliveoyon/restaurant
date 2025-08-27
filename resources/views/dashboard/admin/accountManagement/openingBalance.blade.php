@@ -41,7 +41,7 @@
                     </div>
                     
                     <div class="form-group row">
-                      <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Product Name</label>
+                      <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Account Type</label>
                       <div class="col-sm-9">
                         <select name="category" class="form-control  form-control-sm category"  id="category">
                             <option value="">--Select a Category--</option>

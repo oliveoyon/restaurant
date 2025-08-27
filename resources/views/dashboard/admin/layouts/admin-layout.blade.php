@@ -217,6 +217,13 @@
                                 </li>
 
                                 <li class="nav-item">
+                                    <a href="{{ route('admin.edit.product.prices') }}" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>{{ __('language.edit_product') }}</p>
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
                                     <a href="{{ route('admin.addProductToStocks') }}" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
                                         <p>{{ __('language.add_product_stock') }}</p>

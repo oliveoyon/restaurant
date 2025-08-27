@@ -5,7 +5,7 @@ namespace App\Models\Admin;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class productStock extends Model
+class ProductStock extends Model
 {
     use HasFactory;
    
@@ -34,5 +34,11 @@ class productStock extends Model
     'purchase_date',
     'expired_date',
 ];
+
+public function product()
+{
+    return $this->belongsTo(Product::class, 'product_id');
+}
+
 
 }

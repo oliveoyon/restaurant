@@ -207,14 +207,14 @@
                                             <td colspan="3" class="text-right"><strong>Discount:</strong></td>
                                             <td colspan="2">
                                                 <input type="number" class="form-control" id="cart-discount"
-                                                    placeholder="0" value="" style="max-width: 100px;">
+                                                    placeholder="0" value="" style="max-width: 100px;" readonly>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td colspan="3" class="text-right"><strong>Paid:</strong></td>
                                             <td colspan="2">
                                                 <input type="number" class="form-control" id="cart-paid"
-                                                    placeholder="0" value="" style="max-width: 100px;">
+                                                    placeholder="0" value="" style="max-width: 100px;" readonly>
                                             </td>
                                         </tr>
                                         <tr>
@@ -454,7 +454,7 @@
             renderCart();
             clearFields();
             $('#search-input').val('');
-            $('#cart-paid').val(0);
+            // $('#cart-paid').val(0);
             $('#cart-discount').val(0);
         }
 
@@ -494,6 +494,7 @@
 
             let due = grandTotal - paid;
             cartDue.textContent = due.toFixed(2);
+            $('#cart-paid').val(grandTotal);
         }
 
 

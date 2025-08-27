@@ -2,6 +2,7 @@
 @section('title', 'Stock Damage')
 @push('admincss')
 <link rel="stylesheet" href="dist/css/custom.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
 @endpush
 
 @section('content')
@@ -61,7 +62,7 @@
                   <div class="form-group row">
                     <label for="colFormLabelSm" class="col-sm-3 col-form-label col-form-label-sm">Date</label>
                     <div class="col-sm-9">
-                      <input type="text" name="damage_date" class="form-control form-control-sm datepicker"  value="<?=date('m/d/Y');?>" >
+                      <input type="text" name="damage_date" class="form-control form-control-sm datepicker"  value="" required >
                       <input type="hidden" name="pdtstock_id" value="">
                       <span class="text-danger error-text invoice_no_error"></span>
                     </div>
@@ -356,6 +357,7 @@
 
 @push('adminjs')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 <script>
     toastr.options.preventDuplicates = true;
       $.ajaxSetup({
@@ -636,9 +638,6 @@
 </script>
 
 <script>
-
-
-
     
     function printDiv() {
             var contents = document.getElementById("printThis").innerHTML;

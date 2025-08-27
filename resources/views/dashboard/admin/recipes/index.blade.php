@@ -68,7 +68,11 @@
                                         <td>
                                             <button class="btn btn-info btn-sm view-recipe-details"
                                                 data-product-id="{{ $productId }}">View</button>
+
+                                            <a href="{{ route('admin.recipes.edit', $productId) }}"
+                                                class="btn btn-primary btn-sm">Edit</a>
                                         </td>
+
                                     </tr>
                                 @empty
                                     <tr>
@@ -93,8 +97,10 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Recipe Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-dismiss="modal"
+                        aria-label="Close">&times;</button>
                 </div>
+
                 <div class="modal-body" id="recipeModalContent">
                     Loading...
                 </div>
@@ -108,6 +114,8 @@
 @endsection
 
 @push('adminjs')
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.2.0/dist/sweetalert2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
@@ -119,24 +127,25 @@
         })
     </script>
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.view-recipe-details').forEach(button => {
-            button.addEventListener('click', function () {
-                const productId = this.getAttribute('data-product-id');
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.view-recipe-details').forEach(button => {
+                button.addEventListener('click', function() {
+                    const productId = this.getAttribute('data-product-id');
 
-                fetch(`/admin/recipes/${productId}`)
-                    .then(response => response.text())
-                    .then(html => {
-                        document.getElementById('recipeModalContent').innerHTML = html;
-                        new bootstrap.Modal(document.getElementById('recipeModal')).show();
-                    })
-                    .catch(error => {
-                        console.error('Error loading recipe:', error);
-                        document.getElementById('recipeModalContent').innerHTML = '<p class="text-danger">Failed to load recipe details.</p>';
-                        new bootstrap.Modal(document.getElementById('recipeModal')).show();
-                    });
+                    fetch(`/admin/recipes/${productId}`)
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('recipeModalContent').innerHTML = html;
+                            new bootstrap.Modal(document.getElementById('recipeModal')).show();
+                        })
+                        .catch(error => {
+                            console.error('Error loading recipe:', error);
+                            document.getElementById('recipeModalContent').innerHTML =
+                                '<p class="text-danger">Failed to load recipe details.</p>';
+                            new bootstrap.Modal(document.getElementById('recipeModal')).show();
+                        });
+                });
             });
         });
-    });
-</script>
+    </script>
 @endpush

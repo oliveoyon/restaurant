@@ -64,19 +64,19 @@ class ExpenditureController extends Controller
             $save_data[] = [
                 'trns_id' => $inv,
                 'account_head_id' => $request->acc_head_id,
-                'description' => $this->getAccName($request->acc_head_id),
+                'description' => $this->getAccName($request->acc_head_id) . (!empty($request->description) ? ' - ' . $request->description : ''),
                 'amount' => $request->amount,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => Carbon::createFromFormat('m/d/Y', $request->exp_date)->format('Y-m-d'),
                 'store_id' => $store_id
             ];
             $save_data[] = [
                 'trns_id' => $inv,
                 'account_head_id' => $request->from_account,
-                'description' => $this->getAccName($request->acc_head_id),
+                'description' => $this->getAccName($request->acc_head_id) . (!empty($request->description) ? ' - ' . $request->description : ''),
                 'amount' => $request->amount,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => Carbon::createFromFormat('m/d/Y', $request->exp_date)->format('Y-m-d'),
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);

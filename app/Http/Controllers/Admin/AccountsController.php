@@ -94,9 +94,7 @@ class AccountsController extends Controller
     public function getAccountTypesList(Request $request)
     {
         $store_id = \Auth::guard('admin')->user()->store_id;
-        $accounttype = Account_Types::select('id', 'account_name', 'account_head_id', 'acctype_status')->where('store_id', $store_id)->get();
-
-
+        $accounttype = Account_Types::select('id', 'account_name', 'account_head_id', 'acctype_status')->where('store_id', $store_id)->whereNotIn('acc_type', ['customer', 'supplier'])->get();
         return datatables()::of($accounttype)
             ->addIndexColumn(0)
             ->addColumn('account_head_id', function ($row) {
@@ -393,6 +391,7 @@ class AccountsController extends Controller
         $allaccount = DB::table('account_types')->select('id', 'account_head_id', 'account_name', 'is_money', 'code')->where(['store_id' => $store_id, 'acctype_status' => 1])->get();
         $sales_revenue = $allaccount->where('account_name', 'Sales Revenue')->pluck('code')->first();
         $inventory = $allaccount->where('account_name', 'Inventory')->pluck('code')->first();
+        $trnsDate = \Carbon\Carbon::parse($request->obdate)->format('Y-m-d');
         $messages = [
             'category.required' => 'Category Name is Required',
             'account_id.required' => 'Account Name is Required',
@@ -429,7 +428,7 @@ class AccountsController extends Controller
                     'description' => 'Opening Balance for Customer',
                     'amount' => $request->amount,
                     'direction' => 1,
-                    'trns_date' => date('Y-m-d'),
+                    'trns_date' => $trnsDate,
                     'store_id' => $store_id
                 ];
                 $save_data[] = [
@@ -438,7 +437,7 @@ class AccountsController extends Controller
                     'description' => 'Opening Balance for Customer',
                     'amount' => $request->amount,
                     'direction' => -1,
-                    'trns_date' => date('Y-m-d'),
+                    'trns_date' => $trnsDate,
                     'store_id' => $store_id
                 ];
                 Transactions::insert($save_data);
@@ -461,7 +460,7 @@ class AccountsController extends Controller
                     'description' => 'Opening Balance for supplier',
                     'amount' => $request->amount,
                     'direction' => 1,
-                    'trns_date' => date('Y-m-d'),
+                    'trns_date' => $trnsDate,
                     'store_id' => $store_id
                 ];
                 $save_data[] = [
@@ -470,7 +469,7 @@ class AccountsController extends Controller
                     'description' => 'Opening Balance for supplier',
                     'amount' => $request->amount,
                     'direction' => -1,
-                    'trns_date' => date('Y-m-d'),
+                    'trns_date' => $trnsDate,
                     'store_id' => $store_id
                 ];
                 Transactions::insert($save_data);
@@ -486,7 +485,7 @@ class AccountsController extends Controller
                 $purchase->due = $request->amount;
                 $purchase->discount = 0;
                 $purchase->paid = 0;
-                $purchase->purchase_date = date('Y-m-d');
+                $purchase->purchase_date = $trnsDate;
                 $purchase->purchase_status = 1; // due, etc
                 $purchase->store_id = $store_id;
                 $query = $purchase->save();
@@ -562,6 +561,7 @@ class AccountsController extends Controller
 
     public function updateSupplierPayment(Request $request)
     {
+        $paidDate = Carbon::parse($request->paidDate)->toDatetimeString();
         $store_id = \Auth::guard('admin')->user()->store_id;
         $messages = [
             'payment.required' => 'Payment is Required',
@@ -578,8 +578,9 @@ class AccountsController extends Controller
 
             $invoice_no = $request->sid;
             $data = DB::select("SELECT `supplier_id`, `invoice_no`, `description`, sum(total) as total, sum(discount) as discount, sum(paid) as paid, (sum(total) - (sum(discount) + sum(paid))) as due FROM purchases WHERE invoice_no = '$invoice_no' AND store_id = $store_id GROUP BY invoice_no HAVING due > 0;");
+            $suppliers = DB::table('suppliers')->where(['id' => $data[0]->supplier_id, 'store_id' => $store_id])->first();
             $purchase = new Purchase();
-            $purchase->description = $request->description;
+            $purchase->description = 'Payment to ' . $suppliers->supplier_name . ' for Invoice No: ' . $invoice_no;
             $purchase->supplier_id = $data[0]->supplier_id;
             $purchase->invoice_no = $data[0]->invoice_no;
             $purchase->trns_type = 1;
@@ -587,12 +588,12 @@ class AccountsController extends Controller
             $purchase->due = 0;
             $purchase->discount = 0;
             $purchase->paid = $request->payment;
-            // $purchase->purchase_date = $purchase_date;
+            $purchase->purchase_date = $paidDate;
             $purchase->purchase_status = 1; // due, etc
             $purchase->store_id = $store_id;
             $query = $purchase->save();
 
-            $suppliers = DB::table('suppliers')->where(['id' => $data[0]->supplier_id, 'store_id' => $store_id])->first();
+
 
             if ($data[0]->total == ($data[0]->paid + $data[0]->discount + $request->payment)) {
                 Purchase::where('invoice_no', $data[0]->invoice_no)->update(['purchase_status' => 2]);
@@ -605,7 +606,7 @@ class AccountsController extends Controller
                 'description' => 'Payment to Supplier for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -614,7 +615,7 @@ class AccountsController extends Controller
                 'description' => 'Payment to Supplier for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -699,6 +700,8 @@ class AccountsController extends Controller
 
     public function updateCustomerPayment(Request $request)
     {
+
+        $paidDate = Carbon::parse($request->paidDate)->toDatetimeString();
         $store_id = \Auth::guard('admin')->user()->store_id;
         $messages = [
             'payment.required' => 'Payment is Required',
@@ -725,6 +728,7 @@ class AccountsController extends Controller
             $sales->discount = 0;
             $sales->paid = $request->payment;
             // $purchase->purchase_date = $purchase_date;
+            $sales->created_at = $paidDate;
             $sales->sale_status = 1; // due, etc
             $sales->store_id = $store_id;
             $query = $sales->save();
@@ -742,7 +746,7 @@ class AccountsController extends Controller
                 'description' => 'Received from Customer for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -751,7 +755,7 @@ class AccountsController extends Controller
                 'description' => 'Received from Customer for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);
@@ -793,6 +797,7 @@ class AccountsController extends Controller
 
     public function updateCustomerPaymentChq(Request $request)
     {
+        $paidDate = Carbon::parse($request->paidDate)->toDatetimeString();
         $store_id = \Auth::guard('admin')->user()->store_id;
         $messages = [
             'payment.required' => 'Payment is Required',
@@ -817,7 +822,7 @@ class AccountsController extends Controller
             $sales->due = 0;
             $sales->discount = 0;
             $sales->paid = $request->payment;
-            // $purchase->purchase_date = $purchase_date;
+            $sales->created_at = $paidDate;
             $sales->sale_status = 1; // due, etc
             $sales->store_id = $store_id;
             $query = $sales->save();
@@ -836,7 +841,7 @@ class AccountsController extends Controller
                 'description' => 'Received from Customer for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => 1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             $save_data[] = [
@@ -845,7 +850,7 @@ class AccountsController extends Controller
                 'description' => 'Received from Customer for Invoice ' . $data[0]->invoice_no,
                 'amount' => $request->payment,
                 'direction' => -1,
-                'trns_date' => date('Y-m-d'),
+                'trns_date' => $paidDate,
                 'store_id' => $store_id
             ];
             Transactions::insert($save_data);

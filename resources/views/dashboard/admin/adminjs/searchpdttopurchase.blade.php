@@ -83,26 +83,25 @@
 
         //DELETE Version RECORD
         $(document).on('click', '#deletePdtBtn', function () {
-    alert('test'); // Just to verify click works
 
-    var cartId = $(this).data('id');
-    var url = '<?= route('admin.deletePdtCart') ?>';
+        var cartId = $(this).data('id');
+        var url = '<?= route('admin.deletePdtCart') ?>';
 
-    if (confirm('Are you sure you want to delete this item?')) {
-        $.post(url, { cartId: cartId }, function (data) {
-            console.log(data); // For debugging in console
-            if (data.code == 1) {
-                $('#table-responsive').html(data.html);
-                $('#table-responsive1').html(data.html1);
-                toastr.success(data.msg);
-            } else {
-                toastr.error(data.msg);
+            if (confirm('Are you sure you want to delete this item?')) {
+                $.post(url, { cartId: cartId }, function (data) {
+                    console.log(data); // For debugging in console
+                    if (data.code == 1) {
+                        $('#table-responsive').html(data.html);
+                        $('#table-responsive1').html(data.html1);
+                        toastr.success(data.msg);
+                    } else {
+                        toastr.error(data.msg);
+                    }
+                }, 'json').fail(function (xhr) {
+                    console.error("Error:", xhr.responseText);
+                });
             }
-        }, 'json').fail(function (xhr) {
-            console.error("Error:", xhr.responseText);
         });
-    }
-});
 
 
 
@@ -110,10 +109,17 @@
         $('#purchase-product-form').on('submit', function(e) {
             e.preventDefault();
             var form = this;
+            
+                // Create FormData from form
+                var formData = new FormData(form);
+
+                // Append extra data
+                let paymentDate = $('.datepicker').val(); // grab the date
+                formData.append('purchaseDate', paymentDate); // append to FormData
             $.ajax({
                 url: $(form).attr('action'),
                 method: $(form).attr('method'),
-                data: new FormData(form),
+                data: formData,
                 processData: false,
                 dataType: 'json',
                 contentType: false,

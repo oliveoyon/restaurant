@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Admin\Account_Types;
 use App\Models\Admin\Transactions;
+use Illuminate\Support\Facades\DB;
 
 class LedgerController extends Controller
 {
     public function showForm()
     {
-        $accounts = Account_Types::orderBy('account_name')->get();
+        $accounts = Account_Types::orderBy('account_name')->whereNotIn('acc_type',['customer','supplier'])->get();
         return view('dashboard.admin.reports.ledger-form', compact('accounts'));
     }
 
@@ -49,6 +50,25 @@ class LedgerController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Build a map: trns_id => "code - name, code - name, ..."
+        $againstMap = collect();
+        $trnsIds = $transactions->pluck('trns_id')->unique()->values();
+
+        if ($trnsIds->isNotEmpty()) {
+            $againstRows = DB::table('transactions as t')
+                ->join('account_types as at', 'at.code', '=', 't.account_head_id')
+                ->whereIn('t.trns_id', $trnsIds)
+                ->where('t.account_head_id', '!=', $accountCode) // exclude the current ledger account
+                ->groupBy('t.trns_id')
+                ->select(
+                    't.trns_id',
+                    DB::raw("GROUP_CONCAT(DISTINCT CONCAT(at.code, ' - ', at.account_name) ORDER BY at.account_name SEPARATOR ', ') as against_accounts")
+                )
+                ->get();
+
+            $againstMap = $againstRows->pluck('against_accounts', 'trns_id');
+        }
+
         // Build ledger
         $ledger = [];
         $balance = $openingBalance;
@@ -60,6 +80,7 @@ class LedgerController extends Controller
             'debit'       => null,
             'credit'      => null,
             'balance'     => $balance,
+            'against'     => null,
         ];
 
         foreach ($transactions as $tx) {
@@ -73,6 +94,7 @@ class LedgerController extends Controller
                 'debit'       => $tx->direction == 1 ? $amount : null,
                 'credit'      => $tx->direction == -1 ? $amount : null,
                 'balance'     => $balance,
+                'against'     => $againstMap->get($tx->trns_id), // <-- NEW
             ];
         }
 
@@ -84,6 +106,34 @@ class LedgerController extends Controller
         ));
     }
 
+    public function getTransactionDetails($trnsId)
+    {
+        $details = DB::table('transactions as t')
+            ->join('account_types as a', 'a.code', '=', 't.account_head_id')
+            ->where('t.trns_id', $trnsId)
+            ->select(
+                't.trns_date',
+                't.trns_id',
+                't.description',
+                't.amount',
+                't.direction',
+                'a.account_name'
+            )
+            ->get()
+            ->map(function ($row) {
+                // Convert amount into debit/credit based on direction
+                if ($row->direction == 1) {
+                    $row->debit = $row->amount;
+                    $row->credit = 0;
+                } else {
+                    $row->debit = 0;
+                    $row->credit = $row->amount;
+                }
+                return $row;
+            });
+
+        return response()->json($details);
+    }
 
     
 }

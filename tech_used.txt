@@ -11,3 +11,79 @@ solution: config/database.php
 
 tarnary operation
 <option value="{{ $customer->parent_id }}" {{ ($customer->is_walkin == 1) ? 'selected' : '' }}>{{ $customer->customer_name .' ('.$customer->customer_phone.')' }}</option>
+
+
+//for making 3 digits account code to 6 digits
+SELECT 
+    code AS old_code,
+    CONCAT(LEFT(code,1), LPAD(RIGHT(code,2), 5, '0')) AS new_code
+FROM account_types
+WHERE CHAR_LENGTH(code) = 3;
+
+
+UPDATE account_types
+SET code = CONCAT(LEFT(code,1), LPAD(RIGHT(code,2), 5, '0'))
+WHERE CHAR_LENGTH(code) = 3;
+
+
+
+
+SELECT 
+    main.trns_date,
+    main.trns_id,
+    main.description,
+    main.debit,
+    main.credit,
+    opp.against_accounts AS against_account,
+    main.account_code,
+    main.supplier_name
+FROM
+(
+    -- your existing query
+    SELECT 
+        p.purchase_date AS trns_date,
+        p.invoice_no AS trns_id,
+        CONCAT('Purchase: ', p.description) AS description,
+        (p.due + p.discount) AS debit,
+        p.paid AS credit,
+        a.code AS account_code,
+        s.supplier_name
+    FROM purchases p
+    INNER JOIN suppliers s ON s.id = p.supplier_id
+    LEFT JOIN transactions t 
+        ON t.trns_id = p.invoice_no
+        AND t.account_head_id = s.parent_id
+    LEFT JOIN account_types a ON a.code = s.parent_id
+    WHERE s.id = 1
+      AND p.purchase_date BETWEEN '2025-04-01' AND '2025-08-30'
+      AND t.trns_id IS NULL
+
+    UNION ALL
+
+    SELECT 
+        t.trns_date,
+        t.trns_id,
+        t.description,
+        CASE WHEN t.direction = 1 THEN ABS(t.amount) ELSE 0 END AS debit,
+        CASE WHEN t.direction = -1 THEN ABS(t.amount) ELSE 0 END AS credit,
+        a.code AS account_code,
+        s.supplier_name
+    FROM transactions t
+    INNER JOIN suppliers s ON s.parent_id = t.account_head_id
+    LEFT JOIN purchases p ON p.invoice_no = t.trns_id AND p.supplier_id = s.id
+    LEFT JOIN account_types a ON a.code = t.account_head_id
+    WHERE s.id = 1
+      AND t.trns_date BETWEEN '2025-04-01' AND '2025-08-30'
+      AND p.invoice_no IS NULL
+) AS main
+-- Aggregate only opposite side accounts
+LEFT JOIN (
+    SELECT trns_id,
+           GROUP_CONCAT(DISTINCT account_head_id) AS against_accounts
+    FROM transactions
+    WHERE (direction = 1 AND trns_id IN (SELECT trns_id FROM transactions WHERE direction = -1))
+       OR (direction = -1 AND trns_id IN (SELECT trns_id FROM transactions WHERE direction = 1))
+    GROUP BY trns_id
+) AS opp ON opp.trns_id = main.trns_id
+ORDER BY main.trns_date, main.trns_id;
+

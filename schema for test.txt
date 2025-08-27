@@ -1,0 +1,252 @@
+Schema::create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('product_hash_id');
+            $table->string('barcode');
+            $table->foreignId('manufacturer_id')->nullable()->constrained()->onDelete('cascade')->default(0);
+            $table->foreignId('category_id')->constrained()->onDelete('cascade');
+            $table->foreignId('brand_id')->constrained()->onDelete('cascade');
+            $table->foreignId('unit_id')->constrained()->onDelete('cascade');
+            $table->foreignId('location_id')->nullable()->constrained()->onDelete('cascade')->default(0);
+            $table->string('product_title');
+            $table->string('title_slug');
+            $table->longText('pdt_description')->nullable();
+            $table->string('product_image')->nullable();
+            $table->tinyInteger('product_status')->default(1);
+            $table->bigInteger('total_quantity')->default(0);
+            $table->integer('store_id');
+            $table->timestamps();
+        });
+
+        Schema::create('product_stocks', function (Blueprint $table) {
+            $table->id();
+            $table->string('pdt_stock_hash_id');
+            $table->string('invoice_no')->nullable();
+            $table->string('product_type')->nullable();
+            $table->string('barcode');
+            $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade')->default(0);
+            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('cascade')->default(0);
+            $table->integer('shelf_id')->nullable();
+            $table->string('serial_no', 100)->nullable();
+            $table->string('batch_no')->nullable();
+            $table->string('size')->nullable();
+            $table->string('color')->nullable();
+            $table->string('stckpdt_image')->nullable();
+            $table->string('quantity')->nullable();
+            $table->unsignedBigInteger('buy_price')->default(0);
+            $table->unsignedBigInteger('sell_price')->default(0);
+            $table->dateTime('purchase_date')->nullable();
+            $table->dateTime('expired_date')->nullable();
+            $table->integer('post_by');
+            $table->integer('store_id');
+            $table->integer('pdtstk_status');
+            $table->timestamps();
+        });
+
+        Schema::create('sales', function (Blueprint $table) {
+            $table->id();
+            $table->integer('customer_id');
+            $table->string('invoice_no');
+            $table->string('trns_type');
+            $table->string('description')->nullable();
+            $table->double('total')->default(0);
+            $table->double('due')->default(0);
+            $table->double('discount')->default(0);
+            $table->double('paid')->default(0);
+            $table->integer('sale_status');
+            $table->integer('store_id');
+            $table->timestamps();
+        });
+
+        Schema::create('sale_products', function (Blueprint $table) {
+            $table->id();
+            $table->string('sale_hash_id', 100)->unique();
+            $table->integer('customer_id');
+            $table->integer('product_id');
+            $table->integer('pdtstock_id');
+            $table->double('quantity')->default(0);
+            $table->double('rate')->default(0);
+            $table->string('invoice_no', 200);
+            $table->integer('sale_by');
+            $table->integer('store_id');
+            $table->timestamps();
+        });
+
+        Schema::create('suppliers', function (Blueprint $table) {
+            $table->id();
+            $table->string('supplier_hash_id', 100)->unique();
+            $table->string('supplier_name', 200);
+            $table->string('supplier_address', 300)->nullable();
+            $table->string('supplier_phone', 300)->nullable();
+            $table->string('supplier_email', 100)->nullable();
+            $table->integer('store_id');
+            $table->boolean('supplier_status')->default(0);
+            $table->integer('parent_id');
+            $table->timestamps();
+        });
+
+        Schema::create('customers', function (Blueprint $table) {
+            $table->id();
+            $table->string('customer_hash_id', 100)->unique();
+            $table->string('customer_name', 200);
+            $table->string('customer_address', 300)->nullable();
+            $table->string('customer_phone', 300)->nullable();
+            $table->string('customer_email', 100)->nullable();
+            $table->integer('store_id');
+            $table->boolean('customer_status')->default(0);
+            $table->integer('parent_id')->default(0);
+            $table->boolean('is_walkin')->default(0);
+            $table->timestamps();
+        });
+
+        //account head table for like head, assets, liabilities etc
+        Schema::create('account_heads', function (Blueprint $table) {
+            $table->id();
+            $table->string('account_head', 100)->nullable();
+            $table->string('account_desc', 100)->nullable();
+            $table->integer('store_id');
+            $table->integer('ach_status');
+            $table->timestamps();
+        });
+
+        //chart of accounts
+
+        Schema::create('account_types', function (Blueprint $table) {
+            $table->id();
+            $table->string('account_type_hash_id');
+            $table->foreignId('account_head_id')->nullable()->constrained()->onDelete('cascade')->default(0);
+            $table->string('account_name');
+            $table->boolean('is_money')->default(false);
+            $table->boolean('is_wallet')->default(false);
+            $table->integer('store_id');
+            $table->integer('acctype_status');
+            $table->integer('code');
+            $table->string('acc_type');
+            $table->integer('normal');
+            $table->timestamps();
+        });
+
+        //transaction table, direction is 1 and -1 for debit and credit
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('trns_id');
+            $table->integer('account_head_id');
+            $table->string('description')->nullable();
+            $table->double('amount')->default(0);
+            $table->integer('direction');
+            $table->date('trns_date');
+            $table->integer('store_id');
+            $table->timestamps();
+        });
+
+        Schema::create('purchases', function (Blueprint $table) {
+            $table->id();
+            $table->integer('supplier_id');
+            $table->string('invoice_no');
+            $table->string('trns_type');
+            $table->string('description')->nullable();
+            $table->unsignedBigInteger('total')->default(0);
+            $table->unsignedBigInteger('due')->default(0);
+            $table->unsignedBigInteger('discount')->default(0);
+            $table->unsignedBigInteger('paid')->default(0);
+            $table->integer('purchase_status');
+            $table->dateTime('purchase_date');
+            $table->integer('store_id');
+            $table->timestamps();
+        });
+
+        Schema::create('purchased_products', function (Blueprint $table) {
+        $table->id();
+
+        $table->string('invoice_no');                     // Purchase invoice number
+        $table->string('product_type')->nullable();       // Optional type/category
+        $table->unsignedBigInteger('product_id');         // FK to products
+        $table->string('batch_no')->nullable();           // Batch number
+        $table->unsignedBigInteger('supplier_id')->nullable();  // FK to suppliers
+        $table->unsignedBigInteger('shelf_id')->nullable();     // FK to shelf/table if needed
+
+        $table->unsignedBigInteger('tax_id')->nullable();       // Optional tax reference
+        $table->decimal('tax_value_percent', 5, 2)->nullable(); // Tax percent
+
+        $table->string('serial_no')->nullable();          // Optional serial
+        $table->string('barcode')->nullable();            // Optional barcode
+        $table->string('size')->nullable();               // Optional
+        $table->string('color')->nullable();              // Optional
+
+        $table->decimal('buy_price', 10, 2);              // Buying price
+        $table->decimal('buy_price_with_tax', 10, 2)->nullable(); // Optional
+        $table->decimal('sell_price', 10, 2)->nullable(); // Selling price
+        $table->integer('quantity');                      // Quantity purchased
+
+        $table->date('purchase_date')->nullable();        // Purchase date
+        $table->date('expired_date')->nullable();         // Expiry date (optional)
+
+        $table->string('post_by')->nullable();            // Who posted the entry
+        $table->unsignedBigInteger('store_id')->nullable(); // Store location
+
+        $table->boolean('status')->default(1);            // Active/inactive
+        $table->timestamps();                             // created_at, updated_at
+    });
+
+
+
+    @extends('dashboard.admin.layouts.admin-layout')
+@section('title', 'Journal Transactions')
+@push('admincss')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <link rel="stylesheet" href="/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <link rel="stylesheet" href="dist/css/custom.css">
+@endpush
+
+@section('content')
+    <div class="content-wrapper">
+
+        <style>
+            .form-group {
+                margin-bottom: 0.5rem;
+            }
+        </style>
+
+        <div class="content">
+            <div class="container-fluid">
+
+
+                <div class="card card-success " id="cards">
+                    <div class="card-header">
+                        <h3 class="card-title">Journal Transactions</h3>
+
+                    </div>
+                    <!-- /.card-header -->
+                    <div class="card-body">
+                        // main content
+
+                    </div>
+                    <!-- /.card-body -->
+
+                </div>
+                <!-- /.card -->
+
+
+
+            </div><!-- /.container-fluid -->
+
+        </div>
+        <!-- /.content -->
+
+    </div>
+    <!-- /.content-wrapper -->
+    <!-- Modal -->
+
+  
+
+
+
+@endsection
+
+@push('adminjs')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    
+@endpush

@@ -112,7 +112,7 @@ class RecipeController extends Controller
         $barcode = strtoupper(Str::random(10));
         $purchaseDate = now()->format('Y-m-d');
 
-        productStock::create([
+        ProductStock::create([
             "pdt_stock_hash_id"   => $pdtStockHashId,
             "invoice_no"          => 'instant manufactured',
             "product_type"        => 2,
@@ -204,11 +204,11 @@ class RecipeController extends Controller
     private function convertUnits($quantity, $fromUnit, $toUnit)
     {
         $conversion = [
-            'kg' => 1000,
-            'gm' => 1,
-            'ltr' => 1000,
-            'ml' => 1,
-            'pcs' => 1,
+            'Kg' => 1000,
+            'Gram' => 1,
+            'Ltr' => 1000,
+            'Ml' => 1,
+            'Pcs' => 1,
         ];
 
         if (!isset($conversion[$fromUnit]) || !isset($conversion[$toUnit])) {
@@ -217,5 +217,50 @@ class RecipeController extends Controller
 
         // convert from source to base unit, then to target
         return $quantity * ($conversion[$fromUnit] / $conversion[$toUnit]);
+    }
+
+    public function edit($product_id)
+    {
+        $product = Product::findOrFail($product_id);
+        $units = Unit::all();
+
+        // Get existing raw materials for this product
+        $recipeItems = ProductRecipe::where('product_id', $product_id)->get();
+
+        $products = Product::all(); // raw + finished products
+
+        return view('dashboard.admin.recipes.edit', compact('product', 'recipeItems', 'products', 'units'));
+    }
+
+
+    public function update(Request $request, $product_id)
+    {
+        $request->validate([
+            'raw_product_id'   => 'required|array',
+            'raw_product_id.*' => 'required|exists:products,id',
+            'quantity'         => 'required|array',
+            'quantity.*'       => 'required|numeric|min:0.01',
+            'unit'             => 'required|array',
+            'unit.*'           => 'required|string'
+        ]);
+
+        // Delete old recipe items
+        ProductRecipe::where('product_id', $product_id)->delete();
+
+        $rawProducts = $request->input('raw_product_id');
+        $quantities  = $request->input('quantity');
+        $units       = $request->input('unit');
+
+        // Insert updated items
+        foreach ($rawProducts as $key => $rawId) {
+            ProductRecipe::create([
+                'product_id'     => $product_id,
+                'raw_product_id' => $rawId,
+                'quantity'       => $quantities[$key],
+                'unit'           => $units[$key],
+            ]);
+        }
+
+        return redirect()->route('admin.recipes.index')->with('success', 'Recipe updated successfully.');
     }
 }
