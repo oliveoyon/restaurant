@@ -1,0 +1,613 @@
+@extends('dashboard.admin.layouts.admin-layout')
+@section('title', 'POS Sale Prototype Compact v2')
+
+@push('admincss')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <style>
+        .pos-container {
+            display: flex;
+            gap: 0.8rem;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .pos-left,
+        .pos-right {
+            background: #f9f9f9;
+            padding: 0.5rem;
+            border-radius: 0.4rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .pos-left {
+            flex: 1;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pos-right {
+            flex: 2;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 0.3rem;
+        }
+
+        .form-group label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 0.1rem;
+            display: block;
+        }
+
+        input.form-control,
+        select.form-control {
+            height: 32px;
+            padding: 0.25rem 0.3rem;
+            font-size: 0.8rem;
+        }
+
+        .cart-summary {
+            background: #fff3cd;
+            padding: 0.4rem;
+            border-radius: 0.3rem;
+            margin-top: 0.4rem;
+            font-size: 0.8rem;
+        }
+
+        .cart-summary p {
+            margin: 0.15rem 0;
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.3rem;
+            font-size: 0.75rem;
+        }
+
+        table th,
+        table td {
+            border: 1px solid #ddd;
+            padding: 0.2rem;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        table th {
+            background-color: #17a2b8;
+            color: #fff;
+            font-size: 0.75rem;
+        }
+
+        table td button {
+            font-size: 0.75rem;
+            padding: 1px 5px;
+            line-height: 1;
+        }
+
+        .product-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .product-card {
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            background: #fff;
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+            margin-bottom: 0.3rem;
+            border-radius: 0.3rem;
+        }
+
+
+        .highlight {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        #search-results,
+        #phone-suggestions {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 9999;
+        }
+
+        #search-results .search-item:hover,
+        #phone-suggestions li:hover,
+        #phone-suggestions li.bg-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+    </style>
+@endpush
+
+
+@section('content')
+    <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid">
+                <h1 class="m-0">POS Sale Prototype</h1>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="pos-container">
+
+                    <!-- Left Column: Compact Form -->
+                    <div class="pos-left">
+                        <form id="pos-form">
+
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="sale_date" class="form-control">
+                            </div>
+
+                            <div class="form-group position-relative">
+                                <label>Phone Number</label>
+                                <input type="text" id="customer-phone" class="form-control" placeholder="Phone"
+                                    autocomplete="off">
+                                <ul id="phone-suggestions" class="list-group position-absolute w-100"
+                                    style="z-index:1000; display:none;"></ul>
+                            </div>
+                            <div class="form-group">
+                                <label>Customer Name</label>
+                                <input type="text" id="customer-name" class="form-control" placeholder="Name">
+                            </div>
+
+                            <div class="form-group position-relative">
+                                <label>Product / Barcode</label>
+                                <input type="text" id="product-name" class="form-control"
+                                    placeholder="Product or Barcode">
+                                <input type="hidden" id="product-id">
+                                <input type="hidden" id="product-price">
+                                <div id="search-results" class="list-group position-absolute w-100"
+                                    style="display:none; z-index:1000; max-height:200px; overflow-y:auto;">
+                                </div>
+                            </div>
+
+
+
+                            <div class="form-group">
+                                <label>Qty</label>
+                                <input type="number" id="product-qty" class="form-control" placeholder="Qty" min="1"
+                                    value="1">
+                            </div>
+                            <button type="button" class="btn btn-success w-100 mb-1" id="add-to-cart">Add</button>
+
+                            <div class="cart-summary">
+                                <p>Subtotal: <span id="subtotal">0</span></p>
+                                <div class="form-group">
+                                    <label>Discount</label>
+                                    <input type="number" id="discount" class="form-control" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Paid</label>
+                                    <input type="number" id="paid" class="form-control" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Payment Method</label>
+                                    <select id="payment-method" class="form-control">
+                                        @foreach ($accounts as $account)
+                                            <option value="{{ $account->code }}">{{ $account->account_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Placeholder for cheque details -->
+                                <div id="cheque-details-container" style="display:none;" class="form-group mt-2">
+                                    <label>Cheque Details</label>
+                                    <input type="text" name="cheque_details" id="cheque-details" class="form-control"
+                                        placeholder="Enter Cheque Details">
+                                </div>
+
+                                <p>Grand Total: <span id="grand-total">0</span></p>
+                                <p>Due: <span class="highlight" id="due">0</span></p>
+                                <button type="button" class="btn btn-primary w-100">Save Sale</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right Column: Cart & Products -->
+                    <div class="pos-right">
+                        <table id="cart-table" class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                    <th>×</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <div class="product-list">
+                            @foreach ($results as $stock)
+                                <div class="product-card" data-id="{{ $stock->id }}"
+                                    data-name="{{ $stock->product_title }}" data-price="{{ $stock->sell_price }}">
+                                    <img src="{{ $stock->stckpdt_image ?? 'https://via.placeholder.com/80?text=No+Image' }}"
+                                        alt="">
+                                    <div>{{ $stock->product_title }}</div>
+                                    <div>${{ $stock->sell_price }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+@endsection
+
+@push('adminjs')
+    <script>
+        let cart = [];
+        let paidManually = false;
+        let selectedIndex = -1;
+        let qtyEnterLocked = false; // prevent multiple Enter submissions
+
+        // === Cart Totals ===
+        function calculateTotals() {
+            let subtotal = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
+            let discount = parseFloat(document.getElementById('discount').value) || 0;
+            let grandTotal = subtotal - discount;
+            let paidInput = document.getElementById('paid');
+
+            if (!paidManually) paidInput.value = grandTotal.toFixed(2);
+
+            let paid = parseFloat(paidInput.value) || 0;
+            let due = grandTotal - paid;
+
+            document.getElementById('subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
+            document.getElementById('due').innerText = due.toFixed(2);
+        }
+
+        // === Update Cart Display ===
+        function updateCart() {
+            let tbody = document.querySelector('#cart-table tbody');
+            tbody.innerHTML = '';
+            cart.forEach((item, index) => {
+                let total = item.qty * item.price;
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td>${item.name}</td>
+            <td>${item.qty}</td>
+            <td>${item.price}</td>
+            <td>${total.toFixed(2)}</td>
+            <td><button class="btn btn-sm btn-danger" onclick="removeItem(${index})">&times;</button></td>
+        `;
+                tbody.appendChild(tr);
+            });
+            calculateTotals();
+        }
+
+        // === Remove Item ===
+        function removeItem(index) {
+            cart.splice(index, 1);
+            updateCart();
+        }
+
+        // === Add Product to Cart ===
+        function addProductToCart(id, name, price, stock_id = null) {
+            if (!name || price <= 0) return;
+
+            let qty = parseInt(document.getElementById('product-qty').value) || 1;
+
+            cart.push({
+                stock_id: stock_id, // <-- add stock_id here
+                name: name,
+                qty: qty,
+                price: price
+            });
+
+            updateCart();
+
+            document.getElementById('product-name').value = '';
+            document.getElementById('product-qty').value = 1;
+            document.getElementById('product-name').focus();
+
+            selectedIndex = -1;
+            $('#search-results').hide();
+        }
+
+        // === Add Button Click ===
+        document.getElementById('add-to-cart').addEventListener('click', () => {
+            let nameInput = document.getElementById('product-name');
+            let name = nameInput.value.trim();
+            if (!name) return;
+
+            let selectedCard = Array.from(document.querySelectorAll('.product-card'))
+                .find(card => card.dataset.name === name);
+            let price = selectedCard ? parseFloat(selectedCard.dataset.price) : 0;
+            let stock_id = selectedCard ? selectedCard.dataset.id : null;
+            addProductToCart(null, name, price, stock_id);
+        });
+
+        // === Discount/Paid Inputs ===
+        document.getElementById('discount').addEventListener('input', () => {
+            paidManually = false;
+            calculateTotals();
+        });
+        document.getElementById('paid').addEventListener('input', () => {
+            paidManually = true;
+            calculateTotals();
+        });
+
+        // === Product Card Click ===
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.getElementById('product-name').value = card.dataset.name;
+                document.getElementById('product-qty').focus();
+            });
+        });
+
+        // === Auto Focus Phone on Load ===
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('customer-phone').focus();
+            document.getElementById('sale_date').value = new Date().toISOString().split('T')[0];
+        });
+
+        // === Customer Phone Search w/ Arrow Keys ===
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('customer-phone');
+            const nameInput = document.getElementById('customer-name');
+            const productInput = document.getElementById('product-name');
+            const suggestions = document.getElementById('phone-suggestions');
+            let suggestionClicked = false;
+            let phoneIndex = -1;
+
+            phoneInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                if (query.length < 2) return suggestions.style.display = 'none';
+
+                fetch(`admin/customers/search-phone?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        suggestions.innerHTML = '';
+                        if (!data.length) return suggestions.style.display = 'none';
+
+                        data.forEach((cust, i) => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item list-group-item-action p-1';
+                            li.textContent = `${cust.customer_phone} - ${cust.customer_name}`;
+                            li.style.cursor = 'pointer';
+                            li.addEventListener('mousedown', e => {
+                                suggestionClicked = true;
+                                phoneInput.value = cust.customer_phone;
+                                nameInput.value = cust.customer_name;
+                                suggestions.style.display = 'none';
+                                productInput.focus();
+                                e.preventDefault();
+                            });
+                            suggestions.appendChild(li);
+                        });
+                        suggestions.style.display = 'block';
+                        phoneIndex = -1;
+                    })
+                    .catch(() => suggestions.style.display = 'none');
+            });
+
+            phoneInput.addEventListener('keydown', function(e) {
+                let items = suggestions.querySelectorAll('li');
+                if (!items.length) return;
+
+                if (e.key === "ArrowDown") {
+                    if (phoneIndex < items.length - 1) phoneIndex++;
+                    highlightPhoneItem(items);
+                    e.preventDefault();
+                }
+                if (e.key === "ArrowUp") {
+                    if (phoneIndex > 0) phoneIndex--;
+                    highlightPhoneItem(items);
+                    e.preventDefault();
+                }
+                if (e.key === "Enter") {
+                    if (phoneIndex >= 0) {
+                        items[phoneIndex].dispatchEvent(new Event('mousedown'));
+                        phoneIndex = -1;
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            phoneInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (!suggestionClicked) suggestions.style.display = 'none';
+                    suggestionClicked = false;
+                }, 50);
+            });
+
+            document.addEventListener('click', e => {
+                if (!phoneInput.contains(e.target) && !suggestions.contains(e.target)) suggestions.style
+                    .display = 'none';
+            });
+
+            function highlightPhoneItem(items) {
+                items.forEach(item => item.classList.remove('bg-primary', 'text-white'));
+                if (phoneIndex >= 0) items[phoneIndex].classList.add('bg-primary', 'text-white');
+            }
+        });
+
+        // === Product Search w/ Arrow Keys & Click ===
+        $('#product-name').on('keyup', function(e) {
+            let query = $(this).val();
+            let items = $('#search-results .search-item');
+
+            if (e.key === "ArrowDown") {
+                if (selectedIndex < items.length - 1) selectedIndex++;
+                highlightItem(items);
+                return;
+            }
+            if (e.key === "ArrowUp") {
+                if (selectedIndex > 0) selectedIndex--;
+                highlightItem(items);
+                return;
+            }
+            if (e.key === "Enter" && selectedIndex >= 0) {
+                items.eq(selectedIndex).click();
+                return;
+            }
+
+            selectedIndex = -1;
+
+            if (query.length > 1) {
+                $.get('/admin/search-product', {
+                    q: query
+                }, function(data) {
+                    let results = data.map(item => `
+                <div class="search-item p-2 border-bottom cursor-pointer"
+                    data-id="${item.id}" data-title="${item.product_title}" data-price="${item.sell_price}">
+                    ${item.product_title} - ${item.sell_price}
+                </div>`).join('');
+                    $('#search-results').html(results).show();
+                });
+            } else {
+                $('#search-results').hide();
+            }
+        });
+
+        function highlightItem(items) {
+            items.removeClass('bg-primary text-white');
+            if (selectedIndex >= 0) items.eq(selectedIndex).addClass('bg-primary text-white');
+        }
+
+        $(document).on('click', '.search-item', function() {
+            let productTitle = $(this).data('title');
+            let productPrice = $(this).data('price');
+            let stockId = $(this).data('id'); // <-- stock_id
+            if (!productTitle) return;
+            $('#product-name').val(productTitle);
+            addProductToCart(null, productTitle, productPrice, stockId);
+        });
+
+        // === Add to Cart on Enter in Quantity ===
+        document.getElementById('product-qty').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !qtyEnterLocked) {
+                qtyEnterLocked = true;
+                let qty = parseInt(this.value) || 0;
+                let name = document.getElementById('product-name').value.trim();
+                if (qty > 0 && name !== '') {
+                    let selectedCard = Array.from(document.querySelectorAll('.product-card'))
+                        .find(card => card.dataset.name === name);
+                    let price = selectedCard ? parseFloat(selectedCard.dataset.price) : 0;
+                    let stockId = selectedCard ? selectedCard.dataset.id : null;
+                    addProductToCart(null, name, price, stockId);
+                }
+                setTimeout(() => {
+                    qtyEnterLocked = false;
+                }, 100);
+                this.value = 1;
+            }
+        });
+
+        // === Submit Cart ===
+        document.querySelector('.cart-summary .btn-primary').addEventListener('click', function() {
+            if (cart.length === 0) {
+                alert("Cart is empty!");
+                return;
+            }
+
+            let data = {
+                sale_date: document.getElementById('sale_date').value,
+                customer_phone: document.getElementById('customer-phone').value.trim(),
+                customer_name: document.getElementById('customer-name').value.trim(),
+                customer_id: 0,
+                cart_items: JSON.stringify(cart), // includes stock_id now
+                discount: parseFloat(document.getElementById('discount').value) || 0,
+                paid: parseFloat(document.getElementById('paid').value) || 0,
+                payment_method: document.getElementById('payment-method').value,
+                total: document.getElementById('grand-total').innerText,
+                cheque_detail: document.getElementById('cheque-details').value
+            };
+
+            if (data.payment_method === 'cheque') {
+                data.cheque_detail = prompt("Enter cheque details:");
+            }
+
+            $.ajax({
+                url: '/admin/sale/new-save',
+                type: 'POST',
+                data: data,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(res) {
+                    if (res.code === 1) {
+                        alert(res.msg);
+
+                        // Clear the cart
+                        document.getElementById('cart-table').querySelector('tbody').innerHTML = '';
+                        cart = [];
+                        calculateTotals();
+
+                        // Open invoice in new window for printing
+                        if (res.invoice_html) {
+                            var printWindow = window.open('', '', 'height=600,width=400');
+                            printWindow.document.write(res.invoice_html);
+                            printWindow.document.close();
+                            printWindow.focus();
+                            printWindow.print();
+                            printWindow.close();
+                        }
+
+                    } else {
+                        alert(res.msg);
+                    }
+                },
+                error: function(err) {
+                    console.error(err);
+                    alert("Something went wrong!");
+                }
+            });
+
+        });
+
+        // === Payment Method Change (Cheque) ===
+        $(document).ready(function() {
+            $('#payment-method').on('change', function() {
+                let selectedText = $("#payment-method option:selected").text();
+                if (selectedText === "Bank Cheque") {
+                    $('#cheque-details-container').show();
+                } else {
+                    $('#cheque-details-container').hide();
+                    $('#cheque-details').val('');
+                }
+            });
+        });
+    </script>
+@endpush

@@ -393,7 +393,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('admin.ledger.supplier.index') }}" class="nav-link">
+                                    <a href="{{ route('admin.supplier.ledger') }}" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
                                         <p>Supplier Ledger</p>
                                     </a>

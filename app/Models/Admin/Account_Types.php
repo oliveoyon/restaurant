@@ -22,9 +22,15 @@ class Account_Types extends Authenticatable
         'account_type_hash_id',
         'account_head_id',
         'account_name',
-        'acctype_status',
+        'is_money',
+        'is_wallet',
         'store_id',
+        'acctype_status',
+        'code',
+        'acc_type',
+        'normal'
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.

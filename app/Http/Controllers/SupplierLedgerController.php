@@ -3,85 +3,86 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Admin\Supplier;
-use App\Models\Admin\Purchase;
-use App\Models\Admin\PurchaseReturns;
-use App\Models\Admin\Transactions;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\DB;
 
 class SupplierLedgerController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::orderBy('supplier_name')->get();
+        // Get all active suppliers for dropdown
+        $suppliers = DB::table('suppliers')->where('supplier_status', 1)->get();
         return view('dashboard.admin.reports.supplier-ledger-form', compact('suppliers'));
     }
 
-
-    public function view(Request $request)
+    public function filter(Request $request)
     {
-        // validation and fetching supplier as before
+        $request->validate([
+            'supplier_id' => 'required|integer',
+            'from_date'   => 'required|date',
+            'to_date'     => 'required|date',
+        ]);
 
-        $from = Carbon::parse($request->from_date)->startOfDay();
-        $to = Carbon::parse($request->to_date)->endOfDay();
+        $supplier_id = $request->supplier_id;
+        $from_date   = $request->from_date;
+        $to_date     = $request->to_date;
+$ledger = DB::select("
+    SELECT main.trns_date, main.trns_id, main.description, main.debit, main.credit,
+        main.against_account,
+        main.account_code,
+        main.supplier_name
+    FROM (
+        /* 1) Fully paid purchases (show actual amounts) */
+        SELECT 
+            p.purchase_date AS trns_date,
+            p.invoice_no AS trns_id,
+            CONCAT('Purchase (Fully Paid): ', p.description) AS description,
+            (p.total) AS debit,
+            (p.paid + p.discount) AS credit,
+            NULL AS against_account,
+            s.parent_id AS account_code,
+            s.supplier_name
+        FROM purchases p
+        INNER JOIN suppliers s ON s.id = p.supplier_id
+        WHERE s.id = ?
+        AND (p.paid + p.discount) >= p.total
+        AND p.purchase_date BETWEEN ? AND ?
 
-        $supplier = Supplier::findOrFail($request->supplier_id);
-        $account_head_id = $supplier->parent_id;
+        UNION ALL
 
-        // Calculate opening balance before $from date
-        $openingBalance = Transactions::where('account_head_id', $account_head_id)
-            ->whereDate('trns_date', '<', $from->toDateString())
-            ->selectRaw('
-            COALESCE(SUM(CASE WHEN direction = 1 THEN amount ELSE 0 END), 0) - 
-            COALESCE(SUM(CASE WHEN direction = -1 THEN amount ELSE 0 END), 0) as balance
-        ')
-            ->value('balance');
+        /* 2) Transactions (partial payments / credit) */
+        SELECT 
+            t.trns_date,
+            t.trns_id,
+            t.description,
+            CASE WHEN t.direction = 1 THEN ABS(t.amount) ELSE 0 END AS debit,
+            CASE WHEN t.direction = -1 THEN ABS(t.amount) ELSE 0 END AS credit,
+            a.account_name AS against_account,
+            LPAD(t.account_head_id,6,'0') AS account_code,
+            s.supplier_name
+        FROM transactions t
+        INNER JOIN suppliers s 
+            ON s.parent_id = LPAD(t.account_head_id,6,'0')
+        LEFT JOIN account_types a
+            ON a.code = t.account_head_id
+        WHERE s.id = ?
+        AND t.trns_date BETWEEN ? AND ?
+    ) AS main
+    ORDER BY main.trns_date, main.trns_id
+", [
+    $supplier_id,   // supplier for purchases
+    $from_date,     // start date
+    $to_date,       // end date
+    $supplier_id,   // supplier for transactions
+    $from_date,     // start date
+    $to_date        // end date
+]);
 
-        // Get transactions in the date range
-        $transactions = Transactions::where('account_head_id', $account_head_id)
-            ->whereBetween('trns_date', [$from->toDateString(), $to->toDateString()])
-            ->orderBy('trns_date')
-            ->orderBy('id')
-            ->get();
 
-        // Prepare entries collection with opening balance row first
-        $entries = collect();
 
-        // Add opening balance row if it exists (non-zero)
-        if ($openingBalance != 0) {
-            $entries->push([
-                'date' => null,
-                'type' => 'Opening Balance',
-                'invoice' => null,
-                'description' => 'Balance before ' . $from->format('j F Y'),
-                'debit' => null,
-                'credit' => null,
-                'balance' => $openingBalance,
-            ]);
-        }
 
-        // Calculate running balance starting with opening balance
-        $running_balance = $openingBalance;
+        // Fetch suppliers again for dropdown
+        $suppliers = DB::table('suppliers')->where('supplier_status', 1)->get();
 
-        foreach ($transactions as $tx) {
-            $debit = $tx->direction == 1 ? $tx->amount : 0;
-            $credit = $tx->direction == -1 ? $tx->amount : 0;
-
-            $running_balance += $debit - $credit;
-
-            $entries->push([
-                'date' => $tx->trns_date,
-                'type' => $tx->description ? (Str::contains(strtolower($tx->description), 'return') ? 'Purchase Return' : (Str::contains(strtolower($tx->description), 'payment') ? 'Payment' : 'Purchase')) : 'Transaction',
-                'invoice' => $tx->trns_id,
-                'description' => $tx->description ?? 'N/A',
-                'debit' => $debit,
-                'credit' => $credit,
-                'balance' => $running_balance,
-            ]);
-        }
-
-        return view('dashboard.admin.reports.supplier-ledger-result', compact('entries', 'supplier', 'from', 'to'));
+        return view('dashboard.admin.reports.supplier-ledger-form', compact('ledger', 'suppliers', 'supplier_id', 'from_date', 'to_date'));
     }
 }
